@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "name": "south-africa-meat-market",
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "installCommand": "cd frontend && npm install",
-  "framework": "nextjs",
-  "outputDirectory": "frontend/.next",
-  "rootDirectory": "frontend"
-}
