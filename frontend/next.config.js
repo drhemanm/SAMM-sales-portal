@@ -1,14 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
+  // Remove deprecated appDir setting - it's now default in Next.js 14
   images: {
     domains: ['firebasestorage.googleapis.com'],
     formats: ['image/webp', 'image/avif'],
   },
-  // Remove rewrites for Vercel deployment - API calls go directly to Firebase
-  // async rewrites() is removed
   
   // Add headers for better CORS handling
   async headers() {
