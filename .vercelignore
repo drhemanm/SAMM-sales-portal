@@ -1,0 +1,7 @@
+backend/
+firebase.json
+firestore.rules
+firestore.indexes.json
+.github/
+*.md
+LICENSE
