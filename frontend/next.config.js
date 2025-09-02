@@ -7,16 +7,35 @@ const nextConfig = {
     domains: ['firebasestorage.googleapis.com'],
     formats: ['image/webp', 'image/avif'],
   },
-  async rewrites() {
+  // Remove rewrites for Vercel deployment - API calls go directly to Firebase
+  // async rewrites() is removed
+  
+  // Add headers for better CORS handling
+  async headers() {
     return [
       {
-        source: '/api/:path*',
-        destination: process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:5001/samm-611c3/us-central1/api/:path*'
-          : 'https://us-central1-samm-611c3.cloudfunctions.net/api/:path*'
-      }
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
     ];
   },
-}
+  
+  // Optimize for Vercel
+  poweredByHeader: false,
+  compress: true,
+};
 
 module.exports = nextConfig;
