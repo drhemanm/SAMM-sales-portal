@@ -12,8 +12,8 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:5001/meat-market-portal/us-central1/api/:path*'
-          : 'https://us-central1-meat-market-portal.cloudfunctions.net/api/:path*'
+          ? 'http://localhost:5001/samm-611c3/us-central1/api/:path*'
+          : 'https://us-central1-samm-611c3.cloudfunctions.net/api/:path*'
       }
     ];
   },
