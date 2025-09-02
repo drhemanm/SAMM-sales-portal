@@ -1,6 +1,50 @@
-// Updated Firebase Functions - backend/functions/src/index.ts
-
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import axios from 'axios';
+
+// Initialize Firebase Admin
+admin.initializeApp();
+
+const app = express();
+
+// Security middleware
+app.use(helmet());
+app.use(cors({ origin: true }));
+app.use(compression());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+});
+app.use(limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Basic auth middleware
+const basicAuth = async (req: any, res: any, next: any) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+app.use(basicAuth);
 
 // Odoo API Configuration
 const ODOO_CONFIG = {
@@ -86,7 +130,7 @@ async function getOdooUserProfile(firebaseUid: string) {
     }
 
     const userData = userDoc.data();
-    const odooUserId = userData.odooUserId;
+    const odooUserId = userData?.odooUserId;
 
     if (!odooUserId) {
       throw new Error('User not linked to Odoo');
@@ -112,11 +156,111 @@ async function getOdooUserProfile(firebaseUid: string) {
   }
 }
 
+// Helper functions
+function getUserRole(groupIds: number[]): string {
+  if (groupIds.includes(1)) return 'admin';
+  if (groupIds.includes(13)) return 'sales_manager';
+  if (groupIds.includes(14)) return 'salesperson';
+  return 'customer';
+}
+
+function mapOdooState(state: string): string {
+  const stateMap: { [key: string]: string } = {
+    'draft': 'draft',
+    'sent': 'pending_approval',
+    'sale': 'processing',
+    'done': 'delivered',
+    'cancel': 'cancelled'
+  };
+  return stateMap[state] || state;
+}
+
+function mapOdooPriority(priority: string): string {
+  const priorityMap: { [key: string]: string } = {
+    '0': 'low',
+    '1': 'normal',
+    '2': 'high',
+    '3': 'urgent'
+  };
+  return priorityMap[priority] || 'normal';
+}
+
+function getCategoryType(categoryIds: any[]): string {
+  // Map Odoo partner categories to your business types
+  if (!categoryIds || categoryIds.length === 0) return 'other';
+  
+  // This would need to be customized based on client's Odoo categories
+  return 'restaurant'; // Default
+}
+
+async function getCustomerCount(domain: any[]): Promise<number> {
+  try {
+    const customers = await odooAPI.searchRead('res.partner',
+      [
+        ['is_company', '=', true],
+        ['customer_rank', '>', 0],
+        ...domain
+      ],
+      ['id']
+    );
+    return customers.length;
+  } catch (error) {
+    console.error('Error getting customer count:', error);
+    return 0;
+  }
+}
+
+// Basic health check route (fallback)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    version: '2.0.0',
+    service: 'Meat Market Portal API with Odoo Integration',
+    odooConfigured: !!(ODOO_CONFIG.url && ODOO_CONFIG.username)
+  });
+});
+
+// Test authenticated route
+app.get('/test-auth', (req: any, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  res.json({ 
+    message: 'Authentication working!', 
+    user: {
+      uid: req.user.uid,
+      email: req.user.email
+    }
+  });
+});
+
 // Get customers based on salesperson assignment in Odoo
 app.get('/customers', async (req: any, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Fallback to mock data if Odoo not configured
+    if (!ODOO_CONFIG.username || !ODOO_CONFIG.password) {
+      const mockCustomers = [
+        {
+          id: '1',
+          businessInfo: {
+            name: 'The Grand Hotel',
+            type: 'hotel'
+          },
+          salesInfo: {
+            assignedSalesperson: req.user?.uid || 'unknown'
+          },
+          metrics: {
+            totalOrders: 156,
+            totalValue: 125000
+          }
+        }
+      ];
+      return res.json({ customers: mockCustomers, source: 'mock' });
     }
 
     const { firebaseUser, odooUser } = await getOdooUserProfile(req.user.uid);
@@ -147,7 +291,7 @@ app.get('/customers', async (req: any, res) => {
     );
 
     // Transform Odoo data to match your frontend interface
-    const transformedCustomers = customers.map(customer => ({
+    const transformedCustomers = customers.map((customer: any) => ({
       id: customer.id.toString(),
       businessInfo: {
         name: customer.name,
@@ -180,6 +324,7 @@ app.get('/customers', async (req: any, res) => {
     res.json({
       customers: transformedCustomers,
       userRole: getUserRole(odooUser.groups_id),
+      source: 'odoo',
       pagination: {
         page: 1,
         limit: customers.length,
@@ -198,6 +343,11 @@ app.get('/orders', async (req: any, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Fallback to mock data if Odoo not configured
+    if (!ODOO_CONFIG.username || !ODOO_CONFIG.password) {
+      return res.json({ orders: [], source: 'mock' });
     }
 
     const { firebaseUser, odooUser } = await getOdooUserProfile(req.user.uid);
@@ -224,7 +374,7 @@ app.get('/orders', async (req: any, res) => {
       ]
     );
 
-    const transformedOrders = orders.map(order => ({
+    const transformedOrders = orders.map((order: any) => ({
       id: order.name,
       orderNumber: order.name,
       orderInfo: {
@@ -245,7 +395,8 @@ app.get('/orders', async (req: any, res) => {
     }));
 
     res.json({ 
-      orders: transformedOrders.slice(0, 50) // Limit for performance
+      orders: transformedOrders.slice(0, 50), // Limit for performance
+      source: 'odoo'
     });
 
   } catch (error) {
@@ -259,6 +410,34 @@ app.get('/analytics/dashboard', async (req: any, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Fallback to mock data if Odoo not configured
+    if (!ODOO_CONFIG.username || !ODOO_CONFIG.password) {
+      return res.json({
+        today: {
+          sales: 87450,
+          orders: 23,
+          customers: 8,
+          avgOrderValue: 3800
+        },
+        thisMonth: {
+          sales: 2340000,
+          orders: 645,
+          customers: 187,
+          growth: 12.5
+        },
+        targets: {
+          monthly: 2500000,
+          quarterly: 7200000,
+          achievement: 93.6
+        },
+        userInfo: {
+          name: 'Demo User',
+          role: 'salesperson'
+        },
+        source: 'mock'
+      });
     }
 
     const { firebaseUser, odooUser } = await getOdooUserProfile(req.user.uid);
@@ -294,8 +473,8 @@ app.get('/analytics/dashboard', async (req: any, res) => {
       ['amount_total']
     );
 
-    const todaySales = todayOrders.reduce((sum, order) => sum + order.amount_total, 0);
-    const monthSales = monthOrders.reduce((sum, order) => sum + order.amount_total, 0);
+    const todaySales = todayOrders.reduce((sum: number, order: any) => sum + order.amount_total, 0);
+    const monthSales = monthOrders.reduce((sum: number, order: any) => sum + order.amount_total, 0);
 
     res.json({
       today: {
@@ -318,7 +497,8 @@ app.get('/analytics/dashboard', async (req: any, res) => {
         name: odooUser.name,
         role: getUserRole(odooUser.groups_id),
         odooId: odooUser.id
-      }
+      },
+      source: 'odoo'
     });
 
   } catch (error) {
@@ -327,51 +507,38 @@ app.get('/analytics/dashboard', async (req: any, res) => {
   }
 });
 
-// Helper functions
-function getUserRole(groupIds: number[]): string {
-  if (groupIds.includes(1)) return 'admin';
-  if (groupIds.includes(13)) return 'sales_manager';
-  if (groupIds.includes(14)) return 'salesperson';
-  return 'customer';
-}
+// Error handling middleware
+app.use((error: any, req: any, res: any, next: any) => {
+  functions.logger.error('API Error:', {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method,
+    userId: req.user?.uid
+  });
 
-function mapOdooState(state: string): string {
-  const stateMap = {
-    'draft': 'draft',
-    'sent': 'pending_approval',
-    'sale': 'processing',
-    'done': 'delivered',
-    'cancel': 'cancelled'
-  };
-  return stateMap[state] || state;
-}
+  const statusCode = error.statusCode || 500;
+  const message = statusCode === 500 ? 'Internal server error' : error.message;
 
-function mapOdooPriority(priority: string): string {
-  const priorityMap = {
-    '0': 'low',
-    '1': 'normal',
-    '2': 'high',
-    '3': 'urgent'
-  };
-  return priorityMap[priority] || 'normal';
-}
+  res.status(statusCode).json({
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+  });
+});
 
-function getCategoryType(categoryIds: any[]): string {
-  // Map Odoo partner categories to your business types
-  if (!categoryIds || categoryIds.length === 0) return 'other';
-  
-  // This would need to be customized based on client's Odoo categories
-  return 'restaurant'; // Default
-}
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    error: 'Endpoint not found',
+    availableEndpoints: [
+      'GET /health',
+      'GET /test-auth', 
+      'GET /customers',
+      'GET /orders',
+      'GET /analytics/dashboard'
+    ]
+  });
+});
 
-async function getCustomerCount(domain: any[]): Promise<number> {
-  const customers = await odooAPI.searchRead('res.partner',
-    [
-      ['is_company', '=', true],
-      ['customer_rank', '>', 0],
-      ...domain
-    ],
-    ['id']
-  );
-  return customers.length;
-}
+// Export the API
+export const api = functions.region('us-central1').https.onRequest(app);
