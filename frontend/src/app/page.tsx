@@ -154,7 +154,7 @@ export default function Dashboard() {
   }, []);
 
   const getStatusIcon = (status: string) => {
-    const icons = {
+    const icons: { [key: string]: JSX.Element } = {
       delivered: <CheckCircle className="h-4 w-4 text-green-500" />,
       'in-transit': <Truck className="h-4 w-4 text-blue-500" />,
       processing: <Clock className="h-4 w-4 text-yellow-500" />,
@@ -164,7 +164,7 @@ export default function Dashboard() {
   };
 
   const getPriorityColor = (priority: string) => {
-    const colors = {
+    const colors: { [key: string]: string } = {
       high: 'bg-red-100 text-red-800 border-red-200',
       urgent: 'bg-red-200 text-red-900 border-red-300',
       normal: 'bg-blue-100 text-blue-800 border-blue-200',
