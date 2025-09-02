@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (resource.data.role in ['admin', 'sales_manager'] || 
+         isAuthorizedSalesperson(userId));
+    }
+    
+    // Customers - role-based access
+    match /customers/{customerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        (getUserRole() in ['admin', 'sales_manager'] || 
+         isAssignedSalesperson(customerId));
+    }
+    
+    // Products - role-based access
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        getUserRole() in ['admin', 'sales_manager'];
+    }
+    
+    // Orders - role-based access
+    match /orders/{orderId} {
+      allow read: if request.auth != null && 
+        (getUserRole() in ['admin', 'sales_manager'] || 
+         isOrderOwner(orderId) || 
+         isOrderCustomer(orderId));
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+        (getUserRole() in ['admin', 'sales_manager'] || 
+         isOrderOwner(orderId));
+    }
+    
+    // Analytics - manager and admin only
+    match /analytics/{document=**} {
+      allow read, write: if request.auth != null && 
+        getUserRole() in ['admin', 'sales_manager'];
+    }
+    
+    // Helper functions
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAuthorizedSalesperson(userId) {
+      let userData = get(/databases/$(database)/documents/users/$(userId)).data;
+      return userData.role == 'salesperson' && 
+        userData.profile.territory == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profile.territory;
+    }
+    
+    function isAssignedSalesperson(customerId) {
+      let customerData = get(/databases/$(database)/documents/customers/$(customerId)).data;
+      return customerData.salesInfo.assignedSalesperson == request.auth.uid;
+    }
+    
+    function isOrderOwner(orderId) {
+      let orderData = get(/databases/$(database)/documents/orders/$(orderId)).data;
+      return orderData.orderInfo.salespersonId == request.auth.uid;
+    }
+    
+    function isOrderCustomer(orderId) {
+      let orderData = get(/databases/$(database)/documents/orders/$(orderId)).data;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return orderData.orderInfo.customerId == userData.customerId;
+    }
+  }
+}
