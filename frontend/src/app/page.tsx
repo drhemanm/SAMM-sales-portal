@@ -1,391 +1,659 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  TrendingUp,
-  ShoppingCart,
-  Users,
-  Target,
-  AlertCircle,
-  Package,
+  ArrowLeft,
+  Search,
   Plus,
-  RefreshCw,
+  Minus,
+  Trash2,
   Calendar,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  User,
+  Package,
   DollarSign,
-  Award,
-  ArrowUpRight,
-  ArrowDownRight,
-  Clock,
+  Send,
+  X,
 } from 'lucide-react';
 import MobileLayout from '@/components/MobileLayout';
-import OrderCard from '@/components/OrderCard';
-import { useAuthStore } from '@/store/authStore';
+import CustomerCard from '@/components/CustomerCard';
+import ProductCard from '@/components/ProductCard';
+import DiscountSelector from '@/components/DiscountSelector';
+import SignaturePad from '@/components/SignaturePad';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProducts } from '@/hooks/useProducts';
+import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
-import { analyticsService } from '@/lib/api';
-import type { DashboardMetrics, Alert } from '@/types';
+import type { Customer, Product } from '@/types';
 
-export default function DashboardPage() {
+type Step = 'customer' | 'products' | 'review' | 'signatures';
+
+export default function NewOrderPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { todayOrders, pendingOrders, loading: ordersLoading } = useOrders();
-  
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { filteredCustomers, loading: customersLoading } = useCustomers();
+  const { filteredProducts, loading: productsLoading } = useProducts();
+  const {
+    cart,
+    addItem,
+    removeItem,
+    updateQuantity,
+    updateDiscount,
+    clearCart,
+    cartTotal,
+    cartSubtotal,
+    cartTotalDiscount,
+    verifyStock,
+  } = useCart();
+  const { createOrder } = useOrders();
 
-  // Fetch dashboard data
-  const fetchDashboard = async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const data = await analyticsService.getDashboard();
-      setMetrics(data);
-
-      // Mock alerts for now (will come from API later)
-      setAlerts([
-        {
-          id: '1',
-          type: 'stock',
-          priority: 'high',
-          message: 'Wagyu Burgers low stock (12kg remaining)',
-          timestamp: new Date(),
-          read: false,
-          actionLabel: 'View Product',
-        },
-        {
-          id: '2',
-          type: 'order',
-          priority: 'medium',
-          message: '3 orders pending delivery today',
-          timestamp: new Date(),
-          read: false,
-          actionLabel: 'View Orders',
-        },
-      ]);
-    } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const [currentStep, setCurrentStep] = useState<Step>('customer');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [salespersonSignature, setSalespersonSignature] = useState<string | null>(null);
+  const [customerSignature, setCustomerSignature] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboard();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    setDeliveryDate(dateStr);
   }, []);
 
-  const handleRefresh = () => {
-    fetchDashboard(true);
+  const searchedCustomers = filteredCustomers.filter((customer) =>
+    customer.name.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  const searchedProducts = filteredProducts.filter((product) =>
+    product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    product.sku.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setCurrentStep('products');
   };
 
-  // Calculate today's achievement percentage
-  const todayAchievement = metrics
-    ? (metrics.today.sales / metrics.today.target) * 100
-    : 0;
-
-  // Get greeting based on time
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+  const handleAddProduct = (product: Product) => {
+    addItem(product, 1);
   };
 
-  // Get alert icon
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'stock':
-        return <Package className="h-4 w-4" />;
-      case 'order':
-        return <ShoppingCart className="h-4 w-4" />;
-      case 'delivery':
-        return <Clock className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
+  const handleProceedToReview = () => {
+    if (cart.length === 0) {
+      setError('Please add at least one product to the order');
+      return;
+    }
+    setError(null);
+    setCurrentStep('review');
+  };
+
+  const handleProceedToSignatures = async () => {
+    const stockCheck = await verifyStock();
+    if (!stockCheck.success) {
+      setError(stockCheck.message || 'Stock verification failed');
+      return;
+    }
+
+    if (!deliveryDate) {
+      setError('Please select a delivery date');
+      return;
+    }
+
+    setError(null);
+    setCurrentStep('signatures');
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!salespersonSignature) {
+      setError('Salesperson signature is required');
+      return;
+    }
+
+    if (!customerSignature) {
+      setError('Customer signature is required');
+      return;
+    }
+
+    if (!selectedCustomer) {
+      setError('Customer not selected');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const orderData = {
+        customerId: selectedCustomer.id,
+        customerName: selectedCustomer.name,
+        items: cart,
+        deliveryDate: new Date(deliveryDate),
+        specialInstructions,
+        signatures: {
+          salesperson: {
+            imageData: salespersonSignature,
+            name: 'Salesperson',
+            timestamp: new Date(),
+          },
+          customer: {
+            imageData: customerSignature,
+            name: selectedCustomer.name,
+            timestamp: new Date(),
+          },
+        },
+      };
+
+      const response = await createOrder(orderData);
+      clearCart();
+      alert(`Order ${response.orderNumber} created successfully!`);
+      router.push('/orders');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create order');
+      setSubmitting(false);
     }
   };
 
-  // Get alert color
-  const getAlertColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-      case 'urgent':
-        return 'bg-red-50 border-red-200 text-red-900';
-      case 'medium':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-900';
-      default:
-        return 'bg-blue-50 border-blue-200 text-blue-900';
+  const handleBack = () => {
+    if (currentStep === 'products') {
+      setCurrentStep('customer');
+      setSelectedCustomer(null);
+    } else if (currentStep === 'review') {
+      setCurrentStep('products');
+    } else if (currentStep === 'signatures') {
+      setCurrentStep('review');
+    } else {
+      router.back();
     }
   };
 
-  if (loading) {
-    return (
-      <MobileLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="spinner-lg mb-4"></div>
-            <p className="text-neutral-brown-light">Loading dashboard...</p>
+  const renderStepContent = () => {
+    switch(currentStep) {
+      case 'customer':
+        return (
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-meat focus:border-meat-red focus:ring-2 focus:ring-meat-red focus:ring-opacity-20 transition-all"
+              />
+            </div>
+
+            {customersLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="spinner-lg"></div>
+              </div>
+            ) : searchedCustomers.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <User className="w-full h-full" />
+                </div>
+                <h3 className="empty-state-title">No Customers Found</h3>
+                <p className="empty-state-description">
+                  {customerSearch
+                    ? `No customers match "${customerSearch}"`
+                    : 'No customers available'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {searchedCustomers.map((customer) => (
+                  <CustomerCard
+                    key={customer.id}
+                    customer={customer}
+                    onClick={handleSelectCustomer}
+                    compact={true}
+                    showDistance={false}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </MobileLayout>
-    );
-  }
+        );
+
+      case 'products':
+        return (
+          <div className="space-y-4">
+            <div className="card bg-gradient-to-r from-meat-red to-meat-red-light text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Customer</p>
+                  <h3 className="text-lg font-bold">{selectedCustomer?.name}</h3>
+                  <p className="text-sm opacity-90 mt-1">
+                    Credit: R{selectedCustomer?.creditAvailable.toLocaleString()} available
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCurrentStep('customer')}
+                  className="p-2 bg-white/20 rounded-full hover:bg-white/30"
+                >
+                  <User className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {cart.length > 0 && (
+              <div className="card bg-green-50 border-green-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-green-700" />
+                    <span className="font-semibold text-green-900">
+                      {cart.length} items in cart
+                    </span>
+                  </div>
+                  <span className="text-xl font-bold text-green-700">
+                    R{cartTotal.toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  onClick={handleProceedToReview}
+                  className="btn-primary w-full"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <span>Review Order</span>
+                </button>
+              </div>
+            )}
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-meat focus:border-meat-red focus:ring-2 focus:ring-meat-red focus:ring-opacity-20 transition-all"
+              />
+            </div>
+
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="spinner-lg"></div>
+              </div>
+            ) : searchedProducts.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <Package className="w-full h-full" />
+                </div>
+                <h3 className="empty-state-title">No Products Found</h3>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {searchedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddProduct}
+                    compact={true}
+                    showStock={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'review':
+        return (
+          <div className="space-y-4">
+            <div className="card">
+              <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Customer
+              </h3>
+              <p className="text-lg font-semibold text-neutral-brown">
+                {selectedCustomer?.name}
+              </p>
+              <p className="text-sm text-neutral-brown-light">
+                {selectedCustomer?.type}
+              </p>
+            </div>
+
+            <div className="card">
+              <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Order Items ({cart.length})
+              </h3>
+              <div className="space-y-4">
+                {cart.map((item) => (
+                  <div key={item.id} className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-neutral-brown">
+                          {item.productName}
+                        </h4>
+                        <p className="text-xs text-neutral-brown-light">
+                          SKU: {item.sku}
+                        </p>
+                        <p className="text-sm text-neutral-brown-light mt-1">
+                          R{item.unitPrice}/{item.unit}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.productId)}
+                        className="p-2 hover:bg-red-50 rounded-meat transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-sm text-neutral-brown-light">Quantity:</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          className="p-2 bg-gray-100 hover:bg-gray-200 rounded-meat transition-colors"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="font-mono font-bold text-lg w-16 text-center">
+                          {item.quantity}{item.unit}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          className="p-2 bg-gray-100 hover:bg-gray-200 rounded-meat transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <DiscountSelector
+                      value={item.discountPercent}
+                      onChange={(discount) => updateDiscount(item.productId, discount)}
+                      amount={item.subtotal}
+                    />
+
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-neutral-brown-light">Subtotal:</span>
+                        <span className="font-mono">R{item.subtotal.toLocaleString()}</span>
+                      </div>
+                      {item.discountAmount > 0 && (
+                        <div className="flex items-center justify-between text-sm text-green-700">
+                          <span>Discount ({item.discountPercent}%):</span>
+                          <span className="font-mono">-R{item.discountAmount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between font-semibold text-meat-red mt-1">
+                        <span>Total:</span>
+                        <span className="font-mono text-lg">R{item.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card bg-gradient-to-br from-meat-red to-meat-red-light text-white">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Order Summary
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="opacity-90">Subtotal:</span>
+                  <span className="font-mono text-lg">R{cartSubtotal.toLocaleString()}</span>
+                </div>
+                {cartTotalDiscount > 0 && (
+                  <div className="flex items-center justify-between text-green-300">
+                    <span>Total Discount:</span>
+                    <span className="font-mono text-lg">-R{cartTotalDiscount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="h-px bg-white/30 my-3"></div>
+                <div className="flex items-center justify-between text-2xl font-bold">
+                  <span>TOTAL:</span>
+                  <span className="font-mono">R{cartTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Delivery Details
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-brown mb-2">
+                    Delivery Date <span className="text-meat-red">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-brown mb-2">
+                    Special Instructions
+                  </label>
+                  <textarea
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    placeholder="e.g., Deliver to back entrance, call on arrival..."
+                    rows={3}
+                    className="input-field resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="card bg-red-50 border-red-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCurrentStep('products')}
+                className="btn-secondary flex-1"
+              >
+                <Package className="h-5 w-5" />
+                <span>Add More</span>
+              </button>
+              <button
+                onClick={handleProceedToSignatures}
+                className="btn-primary flex-1"
+              >
+                <FileText className="h-5 w-5" />
+                <span>Sign Order</span>
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'signatures':
+        return (
+          <div className="space-y-4">
+            <div className="card bg-gradient-to-r from-green-500 to-green-600 text-white">
+              <h3 className="font-bold mb-3">Ready to Submit</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">{cart.length} items</p>
+                  <p className="text-sm opacity-90">Delivery: {new Date(deliveryDate).toLocaleDateString()}</p>
+                </div>
+                <p className="text-3xl font-bold font-mono">R{cartTotal.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="card">
+              <SignaturePad
+                label="Salesperson Signature"
+                required={true}
+                onSave={(signature) => setSalespersonSignature(signature)}
+                onClear={() => setSalespersonSignature(null)}
+              />
+              {salespersonSignature && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-meat">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm font-semibold">Signature captured</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <SignaturePad
+                label="Customer Signature"
+                required={true}
+                onSave={(signature) => setCustomerSignature(signature)}
+                onClear={() => setCustomerSignature(null)}
+              />
+              {customerSignature && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-meat">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm font-semibold">Signature captured</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="card bg-gray-50">
+              <div className="space-y-2 text-sm text-neutral-brown-light">
+                <p className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>I confirm that the order details are correct</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Stock will be depleted immediately upon submission</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>Delivery date and instructions are confirmed</span>
+                </p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="card bg-red-50 border-red-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmitOrder}
+              disabled={!salespersonSignature || !customerSignature || submitting}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <>
+                  <div className="spinner"></div>
+                  <span>Submitting Order...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-5 w-5" />
+                  <span>Submit Order</span>
+                </>
+              )}
+            </button>
+          </div>
+        );
+    }
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 'customer':
+        return 'Select Customer';
+      case 'products':
+        return 'Add Products';
+      case 'review':
+        return 'Review Order';
+      case 'signatures':
+        return 'Signatures';
+      default:
+        return 'New Order';
+    }
+  };
+
+  const getStepNumber = () => {
+    switch (currentStep) {
+      case 'customer':
+        return 1;
+      case 'products':
+        return 2;
+      case 'review':
+        return 3;
+      case 'signatures':
+        return 4;
+      default:
+        return 1;
+    }
+  };
 
   return (
     <MobileLayout>
-      <div className="space-y-4 p-4">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-meat-red to-meat-red-light rounded-meat p-6 text-white shadow-meat">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-white/80 text-sm mb-1">{getGreeting()}</p>
-              <h2 className="text-2xl font-bold">
-                {user?.profile.firstName || 'Salesperson'}
-              </h2>
-              <p className="text-white/80 text-sm mt-1">
-                {user?.profile.territory || 'Territory'}
+      <div className="flex flex-col h-full">
+        <div className="bg-white border-b border-gray-200 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-100 rounded-meat transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-neutral-brown" />
+            </button>
+            <div className="flex-1 text-center">
+              <h1 className="text-xl font-bold text-neutral-brown">{getStepTitle()}</h1>
+              <p className="text-xs text-neutral-brown-light">
+                Step {getStepNumber()} of 4
               </p>
             </div>
             <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 bg-white/20 rounded-full hover:bg-white/30 active:bg-white/40 transition-colors disabled:opacity-50"
+              onClick={() => {
+                if (confirm('Cancel order creation?')) {
+                  clearCart();
+                  router.back();
+                }
+              }}
+              className="p-2 hover:bg-gray-100 rounded-meat transition-colors"
             >
-              <RefreshCw
-                className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`}
-              />
+              <X className="h-5 w-5 text-neutral-brown" />
             </button>
           </div>
 
-          {/* Today's Progress */}
-          <div className="bg-white/10 rounded-meat p-4 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/90">Today's Target</span>
-              <span className="text-lg font-bold">
-                {todayAchievement.toFixed(0)}%
-              </span>
-            </div>
-            <div className="progress-bar bg-white/20">
+          <div className="flex items-center gap-2">
+            {[1, 2, 3, 4].map((step) => (
               <div
-                className="h-full bg-white rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(todayAchievement, 100)}%` }}
+                key={step}
+                className={`h-2 flex-1 rounded-full transition-all ${
+                  step <= getStepNumber()
+                    ? 'bg-meat-red'
+                    : 'bg-gray-200'
+                }`}
               />
-            </div>
-            <div className="flex items-center justify-between mt-2 text-sm">
-              <span className="text-white/80">
-                R{metrics?.today.sales.toLocaleString()}
-              </span>
-              <span className="text-white/80">
-                R{metrics?.today.target.toLocaleString()}
-              </span>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Today's Orders */}
-          <div className="stat-card-green">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-2">
-                <ShoppingCart className="h-6 w-6 text-white/80" />
-                <ArrowUpRight className="h-5 w-5 text-green-300" />
-              </div>
-              <p className="text-3xl font-bold mb-1">
-                {metrics?.today.orders || 0}
-              </p>
-              <p className="text-green-100 text-sm">Orders Today</p>
-            </div>
-          </div>
-
-          {/* Customers Visited */}
-          <div className="stat-card-gold">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-2">
-                <Users className="h-6 w-6 text-white/80" />
-                <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                  {metrics?.today.completed}/{metrics?.today.visits}
-                </span>
-              </div>
-              <p className="text-3xl font-bold mb-1">
-                {metrics?.today.completed || 0}
-              </p>
-              <p className="text-yellow-100 text-sm">Visits Done</p>
-            </div>
-          </div>
-
-          {/* Avg Order Value */}
-          <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-5 w-5 text-white/80" />
-              <span className="text-xs text-white/80">Avg Order</span>
-            </div>
-            <p className="text-2xl font-bold font-mono">
-              R{((metrics?.today.sales || 0) / (metrics?.today.orders || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </p>
-          </div>
-
-          {/* Monthly Progress */}
-          <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="h-5 w-5 text-white/80" />
-              <span className="text-xs text-white/80">This Month</span>
-            </div>
-            <p className="text-2xl font-bold">
-              {metrics?.thisMonth.achievement.toFixed(0)}%
-            </p>
-          </div>
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+          {renderStepContent()}
+          <div className="h-4"></div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="card">
-          <h3 className="font-bold text-neutral-brown mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => router.push('/orders/new')}
-              className="btn-primary"
-            >
-              <Plus className="h-5 w-5" />
-              <span>New Order</span>
-            </button>
-            <button
-              onClick={() => router.push('/inventory')}
-              className="btn-secondary"
-            >
-              <Package className="h-5 w-5" />
-              <span>Check Stock</span>
-            </button>
-            <button
-              onClick={() => router.push('/customers')}
-              className="btn-secondary"
-            >
-              <Users className="h-5 w-5" />
-              <span>Customers</span>
-            </button>
-            <button
-              onClick={() => router.push('/analytics')}
-              className="btn-secondary"
-            >
-              <TrendingUp className="h-5 w-5" />
-              <span>My KPIs</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Alerts */}
-        {alerts.length > 0 && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-neutral-brown">Alerts</h3>
-              <span className="badge-danger text-xxs">{alerts.length}</span>
-            </div>
-            <div className="space-y-3">
-              {alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`p-3 rounded-meat border ${getAlertColor(
-                    alert.priority
-                  )}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{alert.message}</p>
-                      {alert.actionLabel && (
-                        <button className="text-xs font-semibold mt-2 hover:underline">
-                          {alert.actionLabel} →
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pending Orders */}
-        {pendingOrders.length > 0 && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-neutral-brown">
-                Pending Orders ({pendingOrders.length})
-              </h3>
-              <button
-                onClick={() => router.push('/orders')}
-                className="text-sm text-meat-red font-semibold hover:underline"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-3">
-              {pendingOrders.slice(0, 3).map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  compact={true}
-                  onClick={() => router.push(`/orders/${order.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Today's Orders */}
-        {todayOrders.length > 0 && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-neutral-brown">
-                Today's Orders ({todayOrders.length})
-              </h3>
-              <button
-                onClick={() => router.push('/orders')}
-                className="text-sm text-meat-red font-semibold hover:underline"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-3">
-              {todayOrders.slice(0, 3).map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  compact={true}
-                  onClick={() => router.push(`/orders/${order.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {todayOrders.length === 0 && !ordersLoading && (
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <ShoppingCart className="w-full h-full" />
-            </div>
-            <h3 className="empty-state-title">No Orders Yet Today</h3>
-            <p className="empty-state-description">
-              Start your day by creating a new order or visiting a customer
-            </p>
-            <button
-              onClick={() => router.push('/orders/new')}
-              className="btn-primary"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Create First Order</span>
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Padding for Navigation */}
-        <div className="h-4"></div>
       </div>
     </MobileLayout>
   );
