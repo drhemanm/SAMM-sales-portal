@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Thermometer, Award, Package, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Star, Thermometer, Award, TrendingUp, AlertCircle } from 'lucide-react';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -17,50 +17,29 @@ export default function ProductCard({
   showStock = true,
   compact = false,
 }: ProductCardProps) {
-  // Calculate stock level percentage
   const stockPercentage = product.lowStockThreshold
     ? Math.min((product.availableStock / product.lowStockThreshold) * 100, 100)
     : 100;
 
-  // Determine stock status
   const getStockStatus = () => {
     if (product.availableStock === 0) {
-      return { level: 'out', label: 'Out of Stock', color: 'text-red-600' };
+      return { level: 'out', label: 'Out of Stock', color: 'text-red-600', bgColor: 'bg-red-50' };
     }
     if (product.availableStock <= product.lowStockThreshold * 0.5) {
-      return { level: 'critical', label: 'Critical Stock', color: 'text-red-600' };
+      return { level: 'critical', label: 'Low Stock', color: 'text-red-600', bgColor: 'bg-red-50' };
     }
     if (product.availableStock <= product.lowStockThreshold) {
-      return { level: 'low', label: 'Low Stock', color: 'text-yellow-600' };
+      return { level: 'low', label: 'Limited Stock', color: 'text-amber-600', bgColor: 'bg-amber-50' };
     }
-    return { level: 'good', label: 'In Stock', color: 'text-green-600' };
+    return { level: 'good', label: 'In Stock', color: 'text-emerald-600', bgColor: 'bg-emerald-50' };
   };
 
   const stockStatus = getStockStatus();
 
-  // Stock bar color class
   const getStockBarClass = () => {
-    if (stockStatus.level === 'out' || stockStatus.level === 'critical') {
-      return 'stock-low';
-    }
-    if (stockStatus.level === 'low') {
-      return 'stock-medium';
-    }
+    if (stockStatus.level === 'out' || stockStatus.level === 'critical') return 'stock-low';
+    if (stockStatus.level === 'low') return 'stock-medium';
     return 'stock-high';
-  };
-
-  // Temperature badge
-  const getTempBadgeClass = () => {
-    if (!product.temperature) return '';
-    if (product.temperature.includes('-')) return 'temp-frozen';
-    if (product.temperature.includes('0-4')) return 'temp-chilled';
-    return 'temp-ambient';
-  };
-
-  // Grade badge
-  const getGradeBadgeClass = () => {
-    if (product.grade === 'Premium') return 'grade-premium';
-    return 'grade-a';
   };
 
   const handleAddClick = (e: React.MouseEvent) => {
@@ -71,170 +50,210 @@ export default function ProductCard({
   };
 
   if (compact) {
-    // Compact list view
     return (
-      <div className="list-item-interactive">
-        <div className="flex items-center gap-3 flex-1">
-          {/* Icon/Image */}
-          <div className="w-12 h-12 bg-gray-100 rounded-meat flex items-center justify-center text-2xl flex-shrink-0">
-            {product.icon || '🥩'}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-neutral-brown line-clamp-1">
-              {product.name}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm font-mono font-bold text-meat-red">
-                R{product.price}/{product.unit}
-              </span>
-              {showStock && (
-                <span className={`text-xs ${stockStatus.color}`}>
-                  {product.availableStock}{product.unit}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Add Button */}
-          {onAddToCart && (
-            <button
-              onClick={handleAddClick}
-              disabled={product.availableStock === 0}
-              className="btn-icon flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <Plus className="h-5 w-5 text-meat-red" />
-            </button>
+      <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 hover:border-rose-200 hover:shadow-lg transition-all duration-200 group">
+        {/* Product Image */}
+        <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-200">
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span>{product.icon || '🥩'}</span>
           )}
         </div>
+
+        {/* Product Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="font-semibold text-gray-900 line-clamp-1 text-sm">
+              {product.name}
+            </h3>
+            {product.grade === 'Premium' && (
+              <span className="badge-premium text-xxs shrink-0">
+                <Star className="h-3 w-3 fill-white" />
+                Premium
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg font-bold text-gray-900">
+              R{product.price}
+            </span>
+            <span className="text-xs text-gray-500">/{product.unit}</span>
+          </div>
+
+          {showStock && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <div className="stock-bar h-1.5">
+                  <div
+                    className={`stock-fill ${getStockBarClass()}`}
+                    style={{ width: `${Math.min(stockPercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+              <span className={`text-xs font-medium ${stockStatus.color}`}>
+                {product.availableStock} {product.unit}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Add Button */}
+        {onAddToCart && (
+          <button
+            onClick={handleAddClick}
+            disabled={product.availableStock === 0}
+            className="btn-icon flex-shrink-0 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            <ShoppingCart className="h-5 w-5" />
+          </button>
+        )}
       </div>
     );
   }
 
   // Full card view
   return (
-    <div className="card-interactive">
-      {/* Header with Category */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-neutral-brown-light uppercase tracking-wide">
-          {product.category}
-        </span>
-        {product.status === 'out_of_stock' && (
-          <span className="badge-danger text-xxs">Out of Stock</span>
-        )}
-      </div>
+    <div className="card-product relative group">
+      {/* Premium Badge */}
+      {product.grade === 'Premium' && (
+        <div className="absolute top-4 left-4 z-10">
+          <span className="badge-premium shadow-lg">
+            <Star className="h-3 w-3 fill-white" />
+            Premium
+          </span>
+        </div>
+      )}
 
-      {/* Product Icon/Image */}
-      <div className="w-full h-32 bg-gradient-to-br from-gray-50 to-gray-100 rounded-meat mb-4 flex items-center justify-center text-6xl">
+      {/* Stock Badge */}
+      {showStock && stockStatus.level !== 'good' && (
+        <div className="absolute top-4 right-4 z-10">
+          <span className={`badge ${stockStatus.bgColor} ${stockStatus.color} shadow-lg`}>
+            {stockStatus.level === 'out' && <AlertCircle className="h-3 w-3" />}
+            {stockStatus.label}
+          </span>
+        </div>
+      )}
+
+      {/* Product Image */}
+      <div className="relative w-full h-56 mb-4 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
         {product.image ? (
           <img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover rounded-meat"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
         ) : (
-          <span>{product.icon || '🥩'}</span>
-        )}
-      </div>
-
-      {/* Product Name */}
-      <h3 className="font-bold text-lg text-neutral-brown mb-2 line-clamp-2">
-        {product.name}
-      </h3>
-
-      {/* SKU */}
-      <p className="text-xs text-neutral-brown-light mb-3 font-mono">
-        SKU: {product.sku}
-      </p>
-
-      {/* Specifications */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {/* Temperature */}
-        {product.temperature && (
-          <div className={getTempBadgeClass()}>
-            <Thermometer className="h-3 w-3" />
-            <span>{product.temperature}</span>
+          <div className="w-full h-full flex items-center justify-center text-7xl">
+            {product.icon || '🥩'}
           </div>
         )}
-
-        {/* Grade */}
-        {product.grade && (
-          <div className={getGradeBadgeClass()}>
-            <Award className="h-3 w-3" />
-            <span>{product.grade}</span>
-          </div>
-        )}
+        
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      {/* Stock Information */}
-      {showStock && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1">
-              <Package className="h-4 w-4 text-neutral-brown-light" />
-              <span className="text-sm text-neutral-brown-light">Stock</span>
+      {/* Product Details */}
+      <div className="space-y-3">
+        {/* Category */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            {product.category}
+          </span>
+          <span className="text-xs text-gray-400 font-mono">
+            {product.sku}
+          </span>
+        </div>
+
+        {/* Product Name */}
+        <h3 className="text-lg font-bold text-gray-900 line-clamp-2 min-h-[3.5rem]">
+          {product.name}
+        </h3>
+
+        {/* Specifications */}
+        <div className="flex flex-wrap gap-2">
+          {product.temperature && (
+            <div className="temp-chilled">
+              <Thermometer className="h-3 w-3" />
+              <span>{product.temperature}</span>
             </div>
-            <span className={`text-sm font-semibold ${stockStatus.color}`}>
-              {product.availableStock} {product.unit}
-            </span>
-          </div>
-
-          {/* Stock Bar */}
-          <div className="stock-bar">
-            <div
-              className={`stock-fill ${getStockBarClass()}`}
-              style={{ width: `${Math.min(stockPercentage, 100)}%` }}
-            />
-          </div>
-
-          {/* Stock Warning */}
-          {(stockStatus.level === 'low' || stockStatus.level === 'critical') && (
-            <div className="flex items-center gap-1 mt-2">
-              <AlertCircle className="h-3 w-3 text-yellow-600" />
-              <span className="text-xs text-yellow-700">
-                {stockStatus.label} - Reorder soon
-              </span>
+          )}
+          {product.grade && product.grade !== 'Premium' && (
+            <div className="grade-a">
+              <Award className="h-3 w-3" />
+              <span>{product.grade}</span>
             </div>
           )}
         </div>
-      )}
 
-      {/* Price and Add Button */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-        <div>
-          <p className="text-xs text-neutral-brown-light mb-1">Price</p>
-          <p className="text-2xl font-bold text-meat-red font-mono">
-            R{product.price}
-            <span className="text-sm text-neutral-brown-light font-normal ml-1">
-              /{product.unit}
-            </span>
-          </p>
-        </div>
-
-        {onAddToCart && (
-          <button
-            onClick={handleAddClick}
-            disabled={product.availableStock === 0}
-            className={`btn-primary ${
-              product.availableStock === 0
-                ? 'opacity-50 cursor-not-allowed'
-                : ''
-            }`}
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add</span>
-          </button>
+        {/* Stock Bar */}
+        {showStock && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Availability</span>
+              <span className={`font-semibold ${stockStatus.color}`}>
+                {product.availableStock} {product.unit}
+              </span>
+            </div>
+            <div className="stock-bar">
+              <div
+                className={`stock-fill ${getStockBarClass()}`}
+                style={{ width: `${Math.min(stockPercentage, 100)}%` }}
+              />
+            </div>
+          </div>
         )}
+
+        {/* Price and Action */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold text-gray-900">
+                R{product.price}
+              </span>
+              <span className="text-sm text-gray-500">
+                /{product.unit}
+              </span>
+            </div>
+            {product.status === 'active' && (
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+                <span className="text-xs text-emerald-600 font-medium">
+                  Available
+                </span>
+              </div>
+            )}
+          </div>
+
+          {onAddToCart && (
+            <button
+              onClick={handleAddClick}
+              disabled={product.availableStock === 0}
+              className={`group/btn flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                product.availableStock === 0
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:from-rose-700 hover:to-rose-600 shadow-lg shadow-rose-500/25 hover:shadow-xl hover:shadow-rose-500/40 active:scale-95'
+              }`}
+            >
+              <ShoppingCart className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
+              <span>Add</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Out of Stock Overlay */}
       {product.availableStock === 0 && (
-        <div className="absolute inset-0 bg-white/90 rounded-meat flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl flex items-center justify-center animate-fade-in">
           <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
-            <p className="font-semibold text-red-700">Out of Stock</p>
-            <p className="text-sm text-red-600 mt-1">Check back later</p>
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-3" />
+            <p className="text-xl font-bold text-red-700 mb-1">Out of Stock</p>
+            <p className="text-sm text-red-600">Check back soon</p>
           </div>
         </div>
       )}
