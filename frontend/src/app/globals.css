@@ -20,30 +20,31 @@
     overscroll-behavior: none;
   }
 
-  /* Smooth scrolling for mobile */
   html, body {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Remove default button styles */
   button {
     -webkit-tap-highlight-color: transparent;
   }
 }
 
 @layer components {
-  /* Primary Buttons - Meat Market Style */
   .btn-primary {
-    @apply bg-meat-red hover:bg-meat-red-dark active:bg-meat-red-dark text-white font-semibold py-3 px-6 rounded-meat transition-all duration-200 shadow-meat;
+    @apply bg-meat-red hover:bg-meat-red-dark text-white font-semibold py-3 px-6 rounded-meat transition-all duration-200 shadow-meat;
     @apply focus:outline-none focus:ring-2 focus:ring-meat-red focus:ring-offset-2;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
     @apply flex items-center justify-center gap-2;
-    min-height: 48px; /* Mobile touch target */
+    min-height: 48px;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
   }
   
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 active:bg-gray-100 text-meat-red font-semibold py-3 px-6 rounded-meat transition-all duration-200;
+    @apply bg-white hover:bg-gray-50 text-meat-red font-semibold py-3 px-6 rounded-meat transition-all duration-200;
     @apply border-2 border-meat-red;
     @apply focus:outline-none focus:ring-2 focus:ring-meat-red focus:ring-offset-2;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -51,21 +52,24 @@
     min-height: 48px;
   }
 
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
   .btn-ghost {
-    @apply bg-transparent hover:bg-gray-100 active:bg-gray-200 text-neutral-brown font-medium py-2 px-4 rounded-meat transition-all duration-200;
+    @apply bg-transparent hover:bg-gray-100 text-neutral-brown font-medium py-2 px-4 rounded-meat transition-all duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-gray-300;
     min-height: 44px;
   }
 
   .btn-icon {
-    @apply p-3 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200;
+    @apply p-3 rounded-full hover:bg-gray-100 transition-colors duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-gray-300;
     min-width: 48px;
     min-height: 48px;
     @apply flex items-center justify-center;
   }
   
-  /* Input Fields - Mobile Optimized */
   .input-field {
     @apply w-full px-4 py-3 border-2 border-gray-300 rounded-meat;
     @apply focus:ring-2 focus:ring-meat-red focus:border-meat-red;
@@ -81,7 +85,6 @@
     background-position: 12px center;
   }
 
-  /* Select Dropdown - Mobile Friendly */
   .select-field {
     @apply input-field appearance-none cursor-pointer;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%232C1810' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -90,25 +93,26 @@
     padding-right: 40px;
   }
   
-  /* Cards - Meat Market Style */
   .card {
     @apply bg-white rounded-meat shadow-soft border border-gray-200 p-4;
     @apply transition-all duration-200;
   }
 
   .card-interactive {
-    @apply card cursor-pointer;
-    @apply hover:shadow-medium hover:border-meat-red active:scale-98;
+    @apply card cursor-pointer hover:shadow-medium hover:border-meat-red;
+    transition: all 0.2s ease;
+  }
+
+  .card-interactive:active {
+    transform: scale(0.98);
   }
 
   .card-meat {
-    @apply bg-white rounded-meat shadow-meat p-5;
-    @apply border-t-4 border-meat-red;
+    @apply bg-white rounded-meat shadow-meat p-5 border-t-4 border-meat-red;
   }
 
   .card-premium {
-    @apply card-meat border-t-4 border-premium-gold;
-    @apply relative overflow-hidden;
+    @apply card-meat border-t-4 border-premium-gold relative overflow-hidden;
   }
 
   .card-premium::before {
@@ -117,7 +121,6 @@
     transform: rotate(45deg) translate(50%, -50%);
   }
   
-  /* Stat Cards */
   .stat-card {
     @apply bg-gradient-to-br p-6 rounded-meat text-white relative overflow-hidden shadow-meat;
   }
@@ -134,7 +137,6 @@
     @apply stat-card from-premium-gold to-premium-gold-light;
   }
   
-  /* Badges & Tags */
   .badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
   }
@@ -163,7 +165,6 @@
     @apply badge bg-premium-gold text-white;
   }
 
-  /* Stock Level Indicators */
   .stock-bar {
     @apply h-2 rounded-full overflow-hidden bg-gray-200;
   }
@@ -184,7 +185,6 @@
     @apply bg-gradient-to-r from-red-500 to-red-600;
   }
 
-  /* Progress Bars */
   .progress-bar {
     @apply h-3 rounded-full overflow-hidden bg-gray-200;
   }
@@ -193,10 +193,8 @@
     @apply h-full bg-gradient-to-r from-meat-red to-meat-red-light transition-all duration-700 rounded-full;
   }
 
-  /* Bottom Sheet / Modal */
   .bottom-sheet {
-    @apply fixed inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl;
-    @apply transform transition-transform duration-300 ease-out;
+    @apply fixed inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out;
     max-height: 90vh;
     z-index: 50;
   }
@@ -206,7 +204,6 @@
     z-index: 40;
   }
 
-  /* Loading Spinner */
   .spinner {
     @apply inline-block w-5 h-5 border-3 border-current border-r-transparent rounded-full animate-spin;
   }
@@ -215,7 +212,6 @@
     @apply w-8 h-8 border-4;
   }
 
-  /* Dividers */
   .divider {
     @apply border-t border-gray-200 my-4;
   }
@@ -224,10 +220,8 @@
     @apply border-t-2 border-meat-red my-6;
   }
 
-  /* List Items */
   .list-item {
-    @apply flex items-center justify-between p-4 border-b border-gray-100;
-    @apply hover:bg-gray-50 active:bg-gray-100 transition-colors;
+    @apply flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors;
     min-height: 64px;
   }
 
@@ -237,18 +231,15 @@
 }
 
 @layer utilities {
-  /* Mobile Tap Targets */
   .tap-target {
     min-width: 48px;
     min-height: 48px;
   }
 
-  /* Text Utilities */
   .text-balance {
     text-wrap: balance;
   }
 
-  /* Safe Area Padding (for notched phones) */
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -257,7 +248,6 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Scrollbar Styling */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
@@ -291,16 +281,6 @@
     display: none;
   }
 
-  /* Active/Press States */
-  .active\:scale-98:active {
-    transform: scale(0.98);
-  }
-
-  .active\:scale-95:active {
-    transform: scale(0.95);
-  }
-
-  /* Truncate with lines */
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -323,7 +303,6 @@
   }
 }
 
-/* Custom Animations */
 @keyframes shimmer {
   0% {
     background-position: -468px 0;
@@ -339,7 +318,6 @@
   background-size: 800px 104px;
 }
 
-/* Signature Pad Styles */
 .signature-canvas {
   @apply border-2 border-dashed border-gray-300 rounded-meat;
   touch-action: none;
@@ -350,7 +328,6 @@
   @apply border-meat-red;
 }
 
-/* Toast/Alert Animations */
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -381,17 +358,14 @@
   animation: slideOutRight 0.3s ease-in;
 }
 
-/* Discount Selector Highlight */
 .discount-option {
-  @apply px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors;
-  @apply border-b border-gray-100 last:border-b-0;
+  @apply px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0;
 }
 
 .discount-option.selected {
   @apply bg-meat-red text-white font-semibold;
 }
 
-/* Temperature Indicator */
 .temp-indicator {
   @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-mono;
 }
@@ -408,7 +382,6 @@
   @apply temp-indicator bg-gray-100 text-gray-800;
 }
 
-/* Grade Badges */
 .grade-badge {
   @apply inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold;
 }
@@ -421,17 +394,13 @@
   @apply grade-badge bg-premium-gold text-white;
 }
 
-/* Offline Indicator */
 .offline-banner {
-  @apply fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 text-sm font-semibold;
-  @apply z-50 safe-top;
+  @apply fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 text-sm font-semibold z-50 safe-top;
   animation: slideDown 0.3s ease-out;
 }
 
-/* Pull to Refresh Indicator */
 .pull-refresh {
-  @apply absolute top-0 left-0 right-0 flex items-center justify-center py-4;
-  @apply text-gray-500 text-sm;
+  @apply absolute top-0 left-0 right-0 flex items-center justify-center py-4 text-gray-500 text-sm;
   transform: translateY(-100%);
   transition: transform 0.3s ease;
 }
@@ -440,13 +409,10 @@
   transform: translateY(0);
 }
 
-/* Image Placeholder */
 .img-placeholder {
-  @apply bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center;
-  @apply text-4xl;
+  @apply bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-4xl;
 }
 
-/* Empty State */
 .empty-state {
   @apply flex flex-col items-center justify-center py-12 px-6 text-center;
 }
