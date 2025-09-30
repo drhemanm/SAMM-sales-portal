@@ -27,14 +27,14 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
-import type { Customer, Product, Signature } from '@/types';
+import type { Customer, Product } from '@/types';
 
 type Step = 'customer' | 'products' | 'review' | 'signatures';
 
 export default function NewOrderPage() {
   const router = useRouter();
   const { filteredCustomers, loading: customersLoading } = useCustomers();
-  const { filteredProducts, loading: productsLoading, checkStock } = useProducts();
+  const { filteredProducts, loading: productsLoading } = useProducts();
   const {
     cart,
     addItem,
@@ -60,7 +60,6 @@ export default function NewOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Set default delivery date to tomorrow
   useEffect(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -68,29 +67,24 @@ export default function NewOrderPage() {
     setDeliveryDate(dateStr);
   }, []);
 
-  // Filter customers by search
   const searchedCustomers = filteredCustomers.filter((customer) =>
     customer.name.toLowerCase().includes(customerSearch.toLowerCase())
   );
 
-  // Filter products by search
   const searchedProducts = filteredProducts.filter((product) =>
     product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
     product.sku.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // Handle customer selection
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setCurrentStep('products');
   };
 
-  // Handle add product
   const handleAddProduct = (product: Product) => {
     addItem(product, 1);
   };
 
-  // Handle proceed to review
   const handleProceedToReview = () => {
     if (cart.length === 0) {
       setError('Please add at least one product to the order');
@@ -100,9 +94,7 @@ export default function NewOrderPage() {
     setCurrentStep('review');
   };
 
-  // Handle proceed to signatures
   const handleProceedToSignatures = async () => {
-    // Verify stock before signatures
     const stockCheck = await verifyStock();
     if (!stockCheck.success) {
       setError(stockCheck.message || 'Stock verification failed');
@@ -118,7 +110,6 @@ export default function NewOrderPage() {
     setCurrentStep('signatures');
   };
 
-  // Handle submit order
   const handleSubmitOrder = async () => {
     if (!salespersonSignature) {
       setError('Salesperson signature is required');
@@ -139,30 +130,17 @@ export default function NewOrderPage() {
     setError(null);
 
     try {
-      // Prepare order data
+      // Prepare order data - use cart items directly (they already have all required fields)
       const orderData = {
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
-        items: cart.map((item) => ({
-          productId: item.productId,
-          productName: item.productName,
-          sku: item.sku,
-          quantity: item.quantity,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
-          discountPercent: item.discountPercent,
-          discountAmount: item.discountAmount,
-          subtotal: item.subtotal,
-          total: item.total,
-          temperature: item.temperature,
-          grade: item.grade,
-        })),
+        items: cart, // cart is already CartItem[] with id and availableStock
         deliveryDate: new Date(deliveryDate),
         specialInstructions,
         signatures: {
           salesperson: {
             imageData: salespersonSignature,
-            name: 'Salesperson', // Will be filled from user profile
+            name: 'Salesperson',
             timestamp: new Date(),
           },
           customer: {
@@ -173,13 +151,8 @@ export default function NewOrderPage() {
         },
       };
 
-      // Submit order
       const response = await createOrder(orderData);
-
-      // Clear cart
       clearCart();
-
-      // Show success and redirect
       alert(`Order ${response.orderNumber} created successfully!`);
       router.push('/orders');
     } catch (err) {
@@ -188,7 +161,6 @@ export default function NewOrderPage() {
     }
   };
 
-  // Handle back navigation
   const handleBack = () => {
     if (currentStep === 'products') {
       setCurrentStep('customer');
@@ -202,13 +174,11 @@ export default function NewOrderPage() {
     }
   };
 
-  // Render step content
   const renderStepContent = () => {
-    switch (currentStep) {
+    switch(currentStep) {
       case 'customer':
         return (
           <div className="space-y-4">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
               <input
@@ -220,7 +190,6 @@ export default function NewOrderPage() {
               />
             </div>
 
-            {/* Customer List */}
             {customersLoading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="spinner-lg"></div>
@@ -256,7 +225,6 @@ export default function NewOrderPage() {
       case 'products':
         return (
           <div className="space-y-4">
-            {/* Selected Customer Info */}
             <div className="card bg-gradient-to-r from-meat-red to-meat-red-light text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -275,7 +243,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Cart Summary */}
             {cart.length > 0 && (
               <div className="card bg-green-50 border-green-200">
                 <div className="flex items-center justify-between mb-3">
@@ -299,7 +266,6 @@ export default function NewOrderPage() {
               </div>
             )}
 
-            {/* Search Products */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
               <input
@@ -311,7 +277,6 @@ export default function NewOrderPage() {
               />
             </div>
 
-            {/* Product List */}
             {productsLoading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="spinner-lg"></div>
@@ -342,7 +307,6 @@ export default function NewOrderPage() {
       case 'review':
         return (
           <div className="space-y-4">
-            {/* Customer Info */}
             <div className="card">
               <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -356,7 +320,6 @@ export default function NewOrderPage() {
               </p>
             </div>
 
-            {/* Cart Items */}
             <div className="card">
               <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
                 <Package className="h-5 w-5" />
@@ -365,7 +328,6 @@ export default function NewOrderPage() {
               <div className="space-y-4">
                 {cart.map((item) => (
                   <div key={item.id} className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
-                    {/* Item Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h4 className="font-semibold text-neutral-brown">
@@ -386,7 +348,6 @@ export default function NewOrderPage() {
                       </button>
                     </div>
 
-                    {/* Quantity Control */}
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-sm text-neutral-brown-light">Quantity:</span>
                       <div className="flex items-center gap-2">
@@ -408,14 +369,12 @@ export default function NewOrderPage() {
                       </div>
                     </div>
 
-                    {/* Discount Selector */}
                     <DiscountSelector
                       value={item.discountPercent}
                       onChange={(discount) => updateDiscount(item.productId, discount)}
                       amount={item.subtotal}
                     />
 
-                    {/* Item Total */}
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-neutral-brown-light">Subtotal:</span>
@@ -437,7 +396,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Order Totals */}
             <div className="card bg-gradient-to-br from-meat-red to-meat-red-light text-white">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
@@ -462,7 +420,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Delivery Details */}
             <div className="card">
               <h3 className="font-bold text-neutral-brown mb-3 flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -496,7 +453,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="card bg-red-50 border-red-200">
                 <div className="flex items-start gap-3">
@@ -506,7 +462,6 @@ export default function NewOrderPage() {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex gap-3">
               <button
                 onClick={() => setCurrentStep('products')}
@@ -529,7 +484,6 @@ export default function NewOrderPage() {
       case 'signatures':
         return (
           <div className="space-y-4">
-            {/* Order Summary Card */}
             <div className="card bg-gradient-to-r from-green-500 to-green-600 text-white">
               <h3 className="font-bold mb-3">Ready to Submit</h3>
               <div className="flex items-center justify-between">
@@ -541,7 +495,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Salesperson Signature */}
             <div className="card">
               <SignaturePad
                 label="Salesperson Signature"
@@ -559,7 +512,6 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            {/* Customer Signature */}
             <div className="card">
               <SignaturePad
                 label="Customer Signature"
@@ -577,7 +529,6 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            {/* Terms & Conditions */}
             <div className="card bg-gray-50">
               <div className="space-y-2 text-sm text-neutral-brown-light">
                 <p className="flex items-start gap-2">
@@ -595,7 +546,6 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="card bg-red-50 border-red-200">
                 <div className="flex items-start gap-3">
@@ -605,7 +555,6 @@ export default function NewOrderPage() {
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               onClick={handleSubmitOrder}
               disabled={!salespersonSignature || !customerSignature || submitting}
@@ -628,7 +577,6 @@ export default function NewOrderPage() {
     }
   };
 
-  // Get step title
   const getStepTitle = () => {
     switch (currentStep) {
       case 'customer':
@@ -644,7 +592,6 @@ export default function NewOrderPage() {
     }
   };
 
-  // Get step indicator
   const getStepNumber = () => {
     switch (currentStep) {
       case 'customer':
@@ -663,9 +610,7 @@ export default function NewOrderPage() {
   return (
     <MobileLayout>
       <div className="flex flex-col h-full">
-        {/* Header */}
         <div className="bg-white border-b border-gray-200 p-4 space-y-3">
-          {/* Navigation */}
           <div className="flex items-center justify-between">
             <button
               onClick={handleBack}
@@ -692,7 +637,6 @@ export default function NewOrderPage() {
             </button>
           </div>
 
-          {/* Progress Bar */}
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((step) => (
               <div
@@ -707,10 +651,8 @@ export default function NewOrderPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
           {renderStepContent()}
-          {/* Bottom Padding */}
           <div className="h-4"></div>
         </div>
       </div>
