@@ -12,6 +12,9 @@ import {
   RefreshCw,
   TrendingUp,
   Award,
+  X,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import MobileLayout from '@/components/MobileLayout';
 import CustomerCard from '@/components/CustomerCard';
@@ -40,20 +43,17 @@ export default function CustomersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Handle search
   const handleSearch = (query: string) => {
     setSearchText(query);
     setSearchQuery(query);
   };
 
-  // Handle type filter
   const handleTypeChange = (type: string) => {
     setSelectedType(type);
     setType(type);
     setShowFilters(false);
   };
 
-  // Handle sort change
   const handleSortChange = (mode: 'name' | 'distance' | 'lastOrder') => {
     setSortMode(mode);
     if (mode === 'distance') {
@@ -63,19 +63,16 @@ export default function CustomersPage() {
     }
   };
 
-  // Handle refresh
   const handleRefresh = async () => {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   };
 
-  // Handle customer click
   const handleCustomerClick = (customer: Customer) => {
     router.push(`/customers/${customer.id}`);
   };
 
-  // Get customer stats
   const getCustomerStats = () => {
     const total = filteredCustomers.length;
     const active = filteredCustomers.filter(
@@ -92,7 +89,6 @@ export default function CustomersPage() {
 
   const stats = getCustomerStats();
 
-  // Format last updated time
   const getLastUpdateText = () => {
     if (!lastUpdated) return 'Never';
     
@@ -112,165 +108,181 @@ export default function CustomersPage() {
   return (
     <MobileLayout>
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-4 space-y-4">
-          {/* Title */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-brown">My Customers</h1>
-              <p className="text-sm text-neutral-brown-light">
-                {filteredCustomers.length} customers assigned to you
-              </p>
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-500 text-white">
+          <div className="p-6 pb-8">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg">
+                  <Users className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-display font-bold">Customers</h1>
+                  <p className="text-white/90 text-sm mt-0.5">
+                    {filteredCustomers.length} customers
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl hover:bg-white/30 transition-all duration-200 active:scale-95 shadow-lg disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-6 w-6 text-white ${refreshing ? 'animate-spin' : ''}`}
+                />
+              </button>
             </div>
 
-            {/* Refresh */}
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 hover:bg-gray-100 rounded-meat transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`h-5 w-5 text-neutral-brown ${
-                  refreshing ? 'animate-spin' : ''
-                }`}
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-300" />
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-white/20 backdrop-blur-xl border-2 border-white/30 rounded-2xl text-white placeholder:text-white/60 focus:bg-white/30 focus:border-white/50 transition-all outline-none"
               />
-            </button>
+              {searchText && (
+                <button
+                  onClick={() => handleSearch('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
+        </div>
 
+        {/* Stats & Filters */}
+        <div className="bg-white border-b border-gray-100 p-4 space-y-4 shadow-sm">
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-gray-50 rounded-meat p-3 text-center">
-              <Users className="h-4 w-4 text-neutral-brown-light mx-auto mb-1" />
-              <p className="text-lg font-bold text-neutral-brown">{stats.total}</p>
-              <p className="text-xxs text-neutral-brown-light">Total</p>
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-3 text-center border border-gray-200">
+              <Users className="h-4 w-4 text-gray-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xxs text-gray-600 font-medium">Total</p>
             </div>
-            <div className="bg-green-50 rounded-meat p-3 text-center">
-              <TrendingUp className="h-4 w-4 text-green-600 mx-auto mb-1" />
-              <p className="text-lg font-bold text-green-700">{stats.active}</p>
-              <p className="text-xxs text-green-600">Active</p>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-3 text-center border border-emerald-200">
+              <TrendingUp className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-emerald-700">{stats.active}</p>
+              <p className="text-xxs text-emerald-600 font-medium">Active</p>
             </div>
-            <div className="bg-yellow-50 rounded-meat p-3 text-center">
-              <Award className="h-4 w-4 text-yellow-600 mx-auto mb-1" />
-              <p className="text-lg font-bold text-yellow-700">{stats.premium}</p>
-              <p className="text-xxs text-yellow-600">Premium</p>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-3 text-center border border-amber-200">
+              <Award className="h-4 w-4 text-amber-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-amber-700">{stats.premium}</p>
+              <p className="text-xxs text-amber-600 font-medium">Premium</p>
             </div>
-            <div className="bg-red-50 rounded-meat p-3 text-center">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-3 text-center border border-red-200">
               <AlertCircle className="h-4 w-4 text-red-600 mx-auto mb-1" />
               <p className="text-lg font-bold text-red-700">{stats.nearCredit}</p>
-              <p className="text-xxs text-red-600">Credit</p>
+              <p className="text-xxs text-red-600 font-medium">Credit</p>
             </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
-            <input
-              type="text"
-              placeholder="Search customers..."
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-meat focus:border-meat-red focus:ring-2 focus:ring-meat-red focus:ring-opacity-20 transition-all"
-            />
           </div>
 
           {/* Filters and Sort */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
             {/* Type Filter */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-meat border-2 whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
                 showFilters || selectedType !== 'all'
-                  ? 'border-meat-red bg-meat-red text-white'
-                  : 'border-gray-300 bg-white text-neutral-brown hover:border-meat-red'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {selectedType === 'all' ? 'All Types' : selectedType}
+              <span className="text-sm">
+                {selectedType === 'all' ? 'All Types' : CUSTOMER_TYPES.find(t => t.value === selectedType)?.label}
               </span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Sort Buttons */}
             <button
               onClick={() => handleSortChange('distance')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-meat border-2 whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
                 sortMode === 'distance'
-                  ? 'border-meat-red bg-meat-red text-white'
-                  : 'border-gray-300 bg-white text-neutral-brown hover:border-meat-red'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <MapPin className="h-4 w-4" />
-              <span className="text-sm font-medium">Nearest</span>
+              <span className="text-sm">Nearest</span>
             </button>
 
             <button
               onClick={() => handleSortChange('lastOrder')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-meat border-2 whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
                 sortMode === 'lastOrder'
-                  ? 'border-meat-red bg-meat-red text-white'
-                  : 'border-gray-300 bg-white text-neutral-brown hover:border-meat-red'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Calendar className="h-4 w-4" />
-              <span className="text-sm font-medium">Recent</span>
+              <span className="text-sm">Recent</span>
             </button>
-          </div>
-
-          {/* Last Updated */}
-          <div className="flex items-center justify-between text-xs text-neutral-brown-light">
-            <span>
-              Updated: {getLastUpdateText()}
-              {source === 'cache' && (
-                <span className="ml-1 text-yellow-600">(cached)</span>
-              )}
-            </span>
-            {sortMode !== 'name' && (
-              <span className="text-meat-red font-medium">
-                Sorted by {sortMode === 'distance' ? 'distance' : 'last order'}
-              </span>
-            )}
           </div>
 
           {/* Type Filter Dropdown */}
           {showFilters && (
-            <div className="bg-gray-50 rounded-meat p-3 space-y-2 animate-slide-down">
+            <div className="bg-gray-50 rounded-2xl p-3 space-y-2 animate-slide-up border border-gray-200">
               <button
                 onClick={() => handleTypeChange('all')}
-                className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${
                   selectedType === 'all'
-                    ? 'bg-meat-red text-white font-semibold'
-                    : 'hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-white'
                 }`}
               >
-                <span className="text-xl">📦</span>
+                <span className="text-2xl">📦</span>
                 <span>All Types</span>
               </button>
               {CUSTOMER_TYPES.map((type) => (
                 <button
                   key={type.value}
                   onClick={() => handleTypeChange(type.value)}
-                  className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${
                     selectedType === type.value
-                      ? 'bg-meat-red text-white font-semibold'
-                      : 'hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-white'
                   }`}
                 >
-                  <span className="text-xl">{type.icon}</span>
+                  <span className="text-2xl">{type.icon}</span>
                   <span>{type.label}</span>
                 </button>
               ))}
             </div>
           )}
+
+          {/* Last Updated */}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>
+              Updated: {getLastUpdateText()}
+              {source === 'cache' && (
+                <span className="ml-1 text-amber-600 font-medium">(cached)</span>
+              )}
+            </span>
+            {sortMode !== 'name' && (
+              <span className="text-blue-600 font-medium">
+                Sorted by {sortMode === 'distance' ? 'distance' : 'last order'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-gray-50">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
-                <div className="spinner-lg mb-4"></div>
-                <p className="text-neutral-brown-light">Loading customers...</p>
+                <div className="spinner-lg mb-4 text-blue-600"></div>
+                <p className="text-gray-600 font-medium">Loading customers...</p>
               </div>
             </div>
           )}
@@ -310,7 +322,7 @@ export default function CustomersPage() {
                     {searchText
                       ? `No customers match "${searchText}"`
                       : selectedType !== 'all'
-                      ? `No customers of type ${selectedType}`
+                      ? `No customers of type ${CUSTOMER_TYPES.find(t => t.value === selectedType)?.label}`
                       : 'No customers assigned to you yet'}
                   </p>
                   {(searchText || selectedType !== 'all') && (
