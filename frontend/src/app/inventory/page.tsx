@@ -11,6 +11,10 @@ import {
   AlertCircle,
   RefreshCw,
   ShoppingCart,
+  Sparkles,
+  TrendingUp,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 import MobileLayout from '@/components/MobileLayout';
 import ProductCard from '@/components/ProductCard';
@@ -40,35 +44,27 @@ export default function InventoryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Handle search
   const handleSearch = (query: string) => {
     setSearchText(query);
     setSearchQuery(query);
   };
 
-  // Handle category filter
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setCategory(category);
     setShowFilters(false);
   };
 
-  // Handle refresh
   const handleRefresh = async () => {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   };
 
-  // Handle add to cart
   const handleAddToCart = (product: Product) => {
     addItem(product, 1);
-    
-    // Show success feedback (you can add a toast notification here)
-    console.log('Added to cart:', product.name);
   };
 
-  // Get stock status summary
   const getStockSummary = () => {
     const lowStock = filteredProducts.filter(
       (p) => p.availableStock <= p.lowStockThreshold && p.availableStock > 0
@@ -83,7 +79,6 @@ export default function InventoryPage() {
 
   const stockSummary = getStockSummary();
 
-  // Format last updated time
   const getLastUpdateText = () => {
     if (!lastUpdated) return 'Never';
     
@@ -103,142 +98,150 @@ export default function InventoryPage() {
   return (
     <MobileLayout>
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-4 space-y-4">
-          {/* Title and Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-brown">Inventory</h1>
-              <p className="text-sm text-neutral-brown-light">
-                {filteredProducts.length} products available
-              </p>
+        {/* Modern Header with Gradient Background */}
+        <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 text-white">
+          <div className="p-6 pb-8">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg">
+                  <Sparkles className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-display font-bold">Products</h1>
+                  <p className="text-white/90 text-sm mt-0.5">
+                    {filteredProducts.length} items available
+                  </p>
+                </div>
+              </div>
+
+              {/* Cart Button */}
+              {cartItemsCount > 0 && (
+                <button
+                  onClick={() => router.push('/orders/new')}
+                  className="relative p-4 bg-white/20 backdrop-blur-xl rounded-2xl hover:bg-white/30 transition-all duration-200 active:scale-95 shadow-lg"
+                >
+                  <ShoppingCart className="h-6 w-6 text-white" />
+                  <span className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold shadow-lg">
+                    {cartItemsCount}
+                  </span>
+                </button>
+              )}
             </div>
 
-            {/* Cart Button */}
-            {cartItemsCount > 0 && (
-              <button
-                onClick={() => router.push('/orders/new')}
-                className="relative p-3 bg-meat-red rounded-full shadow-meat"
-              >
-                <ShoppingCart className="h-6 w-6 text-white" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-premium-gold rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {cartItemsCount}
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-rose-300" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-white/20 backdrop-blur-xl border-2 border-white/30 rounded-2xl text-white placeholder:text-white/60 focus:bg-white/30 focus:border-white/50 transition-all outline-none"
+              />
+              {searchText && (
+                <button
+                  onClick={() => handleSearch('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Filters & Controls */}
+        <div className="bg-white border-b border-gray-100 p-4 space-y-4 shadow-sm">
+          {/* Stock Summary */}
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200 shrink-0">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-sm font-semibold text-emerald-700">
+                {stockSummary.inStock} In Stock
+              </span>
+            </div>
+            {stockSummary.lowStock > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-xl border border-amber-200 shrink-0">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span className="text-sm font-semibold text-amber-700">
+                  {stockSummary.lowStock} Low
                 </span>
-              </button>
+              </div>
+            )}
+            {stockSummary.outOfStock > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 rounded-xl border border-red-200 shrink-0">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span className="text-sm font-semibold text-red-700">
+                  {stockSummary.outOfStock} Out
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-brown-light" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-meat focus:border-meat-red focus:ring-2 focus:ring-meat-red focus:ring-opacity-20 transition-all"
-            />
-          </div>
-
-          {/* Filters and View Toggle */}
-          <div className="flex items-center justify-between">
+          {/* Category Filter & View Toggle */}
+          <div className="flex items-center gap-3">
+            {/* Category Dropdown */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-meat border-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all flex-1 ${
                 showFilters || selectedCategory !== 'all'
-                  ? 'border-meat-red bg-meat-red text-white'
-                  : 'border-gray-300 bg-white text-neutral-brown hover:border-meat-red'
+                  ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">
+              <span className="text-sm">
                 {selectedCategory === 'all' ? 'All Categories' : selectedCategory}
               </span>
+              <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className="flex items-center gap-2">
-              {/* Refresh */}
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
               <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="p-2 hover:bg-gray-100 rounded-meat transition-colors disabled:opacity-50"
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white shadow-sm text-rose-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <RefreshCw
-                  className={`h-5 w-5 text-neutral-brown ${
-                    refreshing ? 'animate-spin' : ''
-                  }`}
-                />
+                <Grid3x3 className="h-5 w-5" />
               </button>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-meat p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded transition-colors ${
-                    viewMode === 'grid'
-                      ? 'bg-white shadow-sm'
-                      : 'hover:bg-gray-200'
-                  }`}
-                >
-                  <Grid3x3 className="h-4 w-4 text-neutral-brown" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-white shadow-sm'
-                      : 'hover:bg-gray-200'
-                  }`}
-                >
-                  <List className="h-4 w-4 text-neutral-brown" />
-                </button>
-              </div>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2.5 rounded-lg transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-white shadow-sm text-rose-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="h-5 w-5" />
+              </button>
             </div>
-          </div>
 
-          {/* Stock Summary */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-neutral-brown-light">
-                  {stockSummary.inStock} in stock
-                </span>
-              </div>
-              {stockSummary.lowStock > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <span className="text-neutral-brown-light">
-                    {stockSummary.lowStock} low
-                  </span>
-                </div>
-              )}
-              {stockSummary.outOfStock > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-neutral-brown-light">
-                    {stockSummary.outOfStock} out
-                  </span>
-                </div>
-              )}
-            </div>
-            <span className="text-neutral-brown-light">
-              Updated: {getLastUpdateText()}
-              {source === 'cache' && (
-                <span className="ml-1 text-yellow-600">(cached)</span>
-              )}
-            </span>
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-5 w-5 text-gray-700 ${refreshing ? 'animate-spin' : ''}`}
+              />
+            </button>
           </div>
 
           {/* Category Filter Dropdown */}
           {showFilters && (
-            <div className="bg-gray-50 rounded-meat p-3 space-y-2 animate-slide-down">
+            <div className="bg-gray-50 rounded-2xl p-3 space-y-2 animate-slide-up border border-gray-200">
               <button
                 onClick={() => handleCategoryChange('all')}
-                className={`w-full text-left px-3 py-2 rounded transition-colors ${
+                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all ${
                   selectedCategory === 'all'
-                    ? 'bg-meat-red text-white font-semibold'
-                    : 'hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-white'
                 }`}
               >
                 All Categories
@@ -247,10 +250,10 @@ export default function InventoryPage() {
                 <button
                   key={category}
                   onClick={() => handleCategoryChange(category)}
-                  className={`w-full text-left px-3 py-2 rounded transition-colors ${
+                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all ${
                     selectedCategory === category
-                      ? 'bg-meat-red text-white font-semibold'
-                      : 'hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-white'
                   }`}
                 >
                   {category}
@@ -258,16 +261,26 @@ export default function InventoryPage() {
               ))}
             </div>
           )}
+
+          {/* Last Updated */}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>
+              Updated: {getLastUpdateText()}
+              {source === 'cache' && (
+                <span className="ml-1 text-amber-600 font-medium">(cached)</span>
+              )}
+            </span>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-gray-50">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
-                <div className="spinner-lg mb-4"></div>
-                <p className="text-neutral-brown-light">Loading products...</p>
+                <div className="spinner-lg mb-4 text-rose-600"></div>
+                <p className="text-gray-600 font-medium">Loading products...</p>
               </div>
             </div>
           )}
@@ -326,7 +339,7 @@ export default function InventoryPage() {
                 </div>
               ) : viewMode === 'grid' ? (
                 // Grid View
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -339,7 +352,7 @@ export default function InventoryPage() {
                 </div>
               ) : (
                 // List View
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
