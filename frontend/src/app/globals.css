@@ -205,11 +205,11 @@
   }
 
   .spinner {
-    @apply inline-block w-5 h-5 border-3 border-current border-r-transparent rounded-full animate-spin;
+    @apply inline-block w-5 h-5 border-2 border-current border-r-transparent rounded-full animate-spin;
   }
 
   .spinner-lg {
-    @apply w-8 h-8 border-4;
+    @apply w-8 h-8 border-4 border-current border-r-transparent rounded-full animate-spin;
   }
 
   .divider {
