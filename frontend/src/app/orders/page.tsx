@@ -15,6 +15,9 @@ import {
   XCircle,
   Calendar,
   DollarSign,
+  Package,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import MobileLayout from '@/components/MobileLayout';
 import OrderCard from '@/components/OrderCard';
@@ -41,28 +44,24 @@ export default function OrdersPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'all' | 'today' | 'pending' | 'completed'>('all');
 
-  // Handle status filter
   const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
     setStatusFilter(status);
     setShowFilters(false);
   };
 
-  // Handle view mode
   const handleViewModeChange = (mode: 'all' | 'today' | 'pending' | 'completed') => {
     setViewMode(mode);
     setSelectedStatus('all');
     setStatusFilter('all');
   };
 
-  // Handle refresh
   const handleRefresh = async () => {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   };
 
-  // Get orders based on view mode
   const getDisplayOrders = () => {
     switch (viewMode) {
       case 'today':
@@ -78,7 +77,6 @@ export default function OrdersPage() {
 
   const displayOrders = getDisplayOrders();
 
-  // Get order stats
   const getOrderStats = () => {
     const total = filteredOrders.length;
     const today = todayOrders.length;
@@ -91,7 +89,6 @@ export default function OrdersPage() {
 
   const stats = getOrderStats();
 
-  // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'delivered':
@@ -108,7 +105,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Format last updated time
   const getLastUpdateText = () => {
     if (!lastUpdated) return 'Never';
     
@@ -128,62 +124,69 @@ export default function OrdersPage() {
   return (
     <MobileLayout>
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-4 space-y-4">
-          {/* Title and Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-brown">Orders</h1>
-              <p className="text-sm text-neutral-brown-light">
-                {displayOrders.length} orders
-              </p>
-            </div>
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-500 text-white">
+          <div className="p-6 pb-8">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg">
+                  <ShoppingCart className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-display font-bold">Orders</h1>
+                  <p className="text-white/90 text-sm mt-0.5">
+                    {displayOrders.length} orders
+                  </p>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2">
-              {/* Refresh */}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="p-2 hover:bg-gray-100 rounded-meat transition-colors disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={`h-5 w-5 text-neutral-brown ${
-                    refreshing ? 'animate-spin' : ''
-                  }`}
-                />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Refresh */}
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl hover:bg-white/30 transition-all duration-200 active:scale-95 shadow-lg disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-6 w-6 text-white ${refreshing ? 'animate-spin' : ''}`}
+                  />
+                </button>
 
-              {/* New Order */}
-              <button
-                onClick={() => router.push('/orders/new')}
-                className="btn-primary"
-              >
-                <Plus className="h-5 w-5" />
-                <span>New</span>
-              </button>
+                {/* New Order Button */}
+                <button
+                  onClick={() => router.push('/orders/new')}
+                  className="flex items-center gap-2 px-5 py-3 bg-white text-purple-600 rounded-2xl font-semibold hover:bg-white/90 transition-all duration-200 active:scale-95 shadow-lg"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>New</span>
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Quick Stats */}
+        {/* Quick View Tabs */}
+        <div className="bg-white border-b border-gray-100 p-4 space-y-4 shadow-sm">
           <div className="grid grid-cols-4 gap-2">
             <button
               onClick={() => handleViewModeChange('all')}
-              className={`p-3 rounded-meat text-center transition-all ${
+              className={`p-3 rounded-xl text-center transition-all ${
                 viewMode === 'all'
-                  ? 'bg-meat-red text-white shadow-meat'
+                  ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-500/25'
                   : 'bg-gray-50 hover:bg-gray-100'
               }`}
             >
-              <ShoppingCart className={`h-4 w-4 mx-auto mb-1 ${
-                viewMode === 'all' ? 'text-white' : 'text-neutral-brown-light'
+              <ShoppingCart className={`h-5 w-5 mx-auto mb-1 ${
+                viewMode === 'all' ? 'text-white' : 'text-gray-600'
               }`} />
               <p className={`text-lg font-bold ${
-                viewMode === 'all' ? 'text-white' : 'text-neutral-brown'
+                viewMode === 'all' ? 'text-white' : 'text-gray-900'
               }`}>
                 {stats.total}
               </p>
-              <p className={`text-xxs ${
-                viewMode === 'all' ? 'text-white opacity-90' : 'text-neutral-brown-light'
+              <p className={`text-xxs font-medium ${
+                viewMode === 'all' ? 'text-white/90' : 'text-gray-600'
               }`}>
                 All
               </p>
@@ -191,22 +194,22 @@ export default function OrdersPage() {
 
             <button
               onClick={() => handleViewModeChange('today')}
-              className={`p-3 rounded-meat text-center transition-all ${
+              className={`p-3 rounded-xl text-center transition-all ${
                 viewMode === 'today'
-                  ? 'bg-green-600 text-white shadow-meat'
-                  : 'bg-green-50 hover:bg-green-100'
+                  ? 'bg-gradient-to-br from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                  : 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
               }`}
             >
-              <Calendar className={`h-4 w-4 mx-auto mb-1 ${
-                viewMode === 'today' ? 'text-white' : 'text-green-600'
+              <Calendar className={`h-5 w-5 mx-auto mb-1 ${
+                viewMode === 'today' ? 'text-white' : 'text-emerald-600'
               }`} />
               <p className={`text-lg font-bold ${
-                viewMode === 'today' ? 'text-white' : 'text-green-700'
+                viewMode === 'today' ? 'text-white' : 'text-emerald-700'
               }`}>
                 {stats.today}
               </p>
-              <p className={`text-xxs ${
-                viewMode === 'today' ? 'text-white opacity-90' : 'text-green-600'
+              <p className={`text-xxs font-medium ${
+                viewMode === 'today' ? 'text-white/90' : 'text-emerald-600'
               }`}>
                 Today
               </p>
@@ -214,22 +217,22 @@ export default function OrdersPage() {
 
             <button
               onClick={() => handleViewModeChange('pending')}
-              className={`p-3 rounded-meat text-center transition-all ${
+              className={`p-3 rounded-xl text-center transition-all ${
                 viewMode === 'pending'
-                  ? 'bg-yellow-600 text-white shadow-meat'
-                  : 'bg-yellow-50 hover:bg-yellow-100'
+                  ? 'bg-gradient-to-br from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/25'
+                  : 'bg-amber-50 hover:bg-amber-100 border border-amber-200'
               }`}
             >
-              <Clock className={`h-4 w-4 mx-auto mb-1 ${
-                viewMode === 'pending' ? 'text-white' : 'text-yellow-600'
+              <Clock className={`h-5 w-5 mx-auto mb-1 ${
+                viewMode === 'pending' ? 'text-white' : 'text-amber-600'
               }`} />
               <p className={`text-lg font-bold ${
-                viewMode === 'pending' ? 'text-white' : 'text-yellow-700'
+                viewMode === 'pending' ? 'text-white' : 'text-amber-700'
               }`}>
                 {stats.pending}
               </p>
-              <p className={`text-xxs ${
-                viewMode === 'pending' ? 'text-white opacity-90' : 'text-yellow-600'
+              <p className={`text-xxs font-medium ${
+                viewMode === 'pending' ? 'text-white/90' : 'text-amber-600'
               }`}>
                 Pending
               </p>
@@ -237,13 +240,13 @@ export default function OrdersPage() {
 
             <button
               onClick={() => handleViewModeChange('completed')}
-              className={`p-3 rounded-meat text-center transition-all ${
+              className={`p-3 rounded-xl text-center transition-all ${
                 viewMode === 'completed'
-                  ? 'bg-blue-600 text-white shadow-meat'
-                  : 'bg-blue-50 hover:bg-blue-100'
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-blue-50 hover:bg-blue-100 border border-blue-200'
               }`}
             >
-              <CheckCircle className={`h-4 w-4 mx-auto mb-1 ${
+              <CheckCircle className={`h-5 w-5 mx-auto mb-1 ${
                 viewMode === 'completed' ? 'text-white' : 'text-blue-600'
               }`} />
               <p className={`text-lg font-bold ${
@@ -251,8 +254,8 @@ export default function OrdersPage() {
               }`}>
                 {stats.completed}
               </p>
-              <p className={`text-xxs ${
-                viewMode === 'completed' ? 'text-white opacity-90' : 'text-blue-600'
+              <p className={`text-xxs font-medium ${
+                viewMode === 'completed' ? 'text-white/90' : 'text-blue-600'
               }`}>
                 Done
               </p>
@@ -261,83 +264,88 @@ export default function OrdersPage() {
 
           {/* Today's Value */}
           {viewMode === 'today' && stats.today > 0 && (
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-meat p-4 text-white">
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-2xl p-5 text-white shadow-lg shadow-emerald-500/25">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  <span className="text-sm opacity-90">Today's Total</span>
+                  <DollarSign className="h-6 w-6" />
+                  <span className="text-sm opacity-90 font-medium">Today's Total</span>
                 </div>
-                <p className="text-2xl font-bold font-mono">
+                <p className="text-3xl font-bold font-mono">
                   R{stats.todayValue.toLocaleString()}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Status Filter */}
+          {/* Status Filter for All View */}
           {viewMode === 'all' && (
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-meat border-2 transition-colors ${
-                showFilters || selectedStatus !== 'all'
-                  ? 'border-meat-red bg-meat-red text-white'
-                  : 'border-gray-300 bg-white text-neutral-brown hover:border-meat-red'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {selectedStatus === 'all' 
-                    ? 'All Statuses' 
-                    : ORDER_STATUSES.find(s => s.value === selectedStatus)?.label || selectedStatus
-                  }
-                </span>
-              </div>
-              {getStatusIcon(selectedStatus)}
-            </button>
-          )}
-
-          {/* Status Filter Dropdown */}
-          {showFilters && viewMode === 'all' && (
-            <div className="bg-gray-50 rounded-meat p-3 space-y-2 animate-slide-down">
+            <>
               <button
-                onClick={() => handleStatusChange('all')}
-                className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center justify-between ${
-                  selectedStatus === 'all'
-                    ? 'bg-meat-red text-white font-semibold'
-                    : 'hover:bg-gray-100'
+                onClick={() => setShowFilters(!showFilters)}
+                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl font-semibold transition-all ${
+                  showFilters || selectedStatus !== 'all'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-500/25'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <span>All Statuses</span>
-                <ShoppingCart className="h-4 w-4" />
+                <div className="flex items-center gap-3">
+                  <Filter className="h-5 w-5" />
+                  <span>
+                    {selectedStatus === 'all' 
+                      ? 'All Statuses' 
+                      : ORDER_STATUSES.find(s => s.value === selectedStatus)?.label || selectedStatus
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(selectedStatus)}
+                  <ChevronDown className={`h-5 w-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </div>
               </button>
-              {ORDER_STATUSES.map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() => handleStatusChange(status.value)}
-                  className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center justify-between ${
-                    selectedStatus === status.value
-                      ? 'bg-meat-red text-white font-semibold'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <span>{status.label}</span>
-                  {getStatusIcon(status.value)}
-                </button>
-              ))}
-            </div>
+
+              {/* Status Filter Dropdown */}
+              {showFilters && (
+                <div className="bg-gray-50 rounded-2xl p-3 space-y-2 animate-slide-up border border-gray-200">
+                  <button
+                    onClick={() => handleStatusChange('all')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-between ${
+                      selectedStatus === 'all'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg'
+                        : 'text-gray-700 hover:bg-white'
+                    }`}
+                  >
+                    <span>All Statuses</span>
+                    <ShoppingCart className="h-4 w-4" />
+                  </button>
+                  {ORDER_STATUSES.map((status) => (
+                    <button
+                      key={status.value}
+                      onClick={() => handleStatusChange(status.value)}
+                      className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-between ${
+                        selectedStatus === status.value
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg'
+                          : 'text-gray-700 hover:bg-white'
+                      }`}
+                    >
+                      <span>{status.label}</span>
+                      {getStatusIcon(status.value)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {/* Last Updated */}
-          <div className="flex items-center justify-between text-xs text-neutral-brown-light">
+          <div className="flex items-center justify-between text-xs text-gray-500">
             <span>
               Updated: {getLastUpdateText()}
               {source === 'cache' && (
-                <span className="ml-1 text-yellow-600">(cached)</span>
+                <span className="ml-1 text-amber-600 font-medium">(cached)</span>
               )}
             </span>
             {viewMode !== 'all' && (
-              <span className="text-meat-red font-medium">
+              <span className="text-purple-600 font-medium">
                 Showing {viewMode} orders
               </span>
             )}
@@ -345,13 +353,13 @@ export default function OrdersPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-gray-50">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
-                <div className="spinner-lg mb-4"></div>
-                <p className="text-neutral-brown-light">Loading orders...</p>
+                <div className="spinner-lg mb-4 text-purple-600"></div>
+                <p className="text-gray-600 font-medium">Loading orders...</p>
               </div>
             </div>
           )}
