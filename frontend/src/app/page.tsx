@@ -5,42 +5,41 @@ import { useRouter } from 'next/navigation';
 import {
   Search,
   Filter,
-  Grid3x3,
-  List,
-  Package,
+  MapPin,
+  Calendar,
+  Users,
   AlertCircle,
   RefreshCw,
-  ShoppingCart,
-  Sparkles,
   TrendingUp,
+  Award,
   X,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import MobileLayout from '@/components/MobileLayout';
-import ProductCard from '@/components/ProductCard';
-import { useProducts } from '@/hooks/useProducts';
-import { useCart } from '@/hooks/useCart';
-import { PRODUCT_CATEGORIES } from '@/types';
-import type { Product } from '@/types';
+import CustomerCard from '@/components/CustomerCard';
+import { useCustomers } from '@/hooks/useCustomers';
+import { CUSTOMER_TYPES } from '@/types';
+import type { Customer } from '@/types';
 
-export default function InventoryPage() {
+export default function CustomersPage() {
   const router = useRouter();
   const {
-    filteredProducts,
+    filteredCustomers,
     loading,
     error,
     lastUpdated,
     source,
     refresh,
     setSearchQuery,
-    setCategory,
-  } = useProducts({ autoFetch: true });
-
-  const { addItem, cartItemsCount } = useCart();
+    setType,
+    sortByDistance,
+    sortByLastOrder,
+  } = useCustomers({ autoFetch: true });
 
   const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedType, setSelectedType] = useState('all');
+  const [sortMode, setSortMode] = useState<'name' | 'distance' | 'lastOrder'>('name');
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,10 +48,19 @@ export default function InventoryPage() {
     setSearchQuery(query);
   };
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    setCategory(category);
+  const handleTypeChange = (type: string) => {
+    setSelectedType(type);
+    setType(type);
     setShowFilters(false);
+  };
+
+  const handleSortChange = (mode: 'name' | 'distance' | 'lastOrder') => {
+    setSortMode(mode);
+    if (mode === 'distance') {
+      sortByDistance();
+    } else if (mode === 'lastOrder') {
+      sortByLastOrder();
+    }
   };
 
   const handleRefresh = async () => {
@@ -61,23 +69,25 @@ export default function InventoryPage() {
     setRefreshing(false);
   };
 
-  const handleAddToCart = (product: Product) => {
-    addItem(product, 1);
+  const handleCustomerClick = (customer: Customer) => {
+    router.push(`/customers/${customer.id}`);
   };
 
-  const getStockSummary = () => {
-    const lowStock = filteredProducts.filter(
-      (p) => p.availableStock <= p.lowStockThreshold && p.availableStock > 0
+  const getCustomerStats = () => {
+    const total = filteredCustomers.length;
+    const active = filteredCustomers.filter(
+      (c) => c.lastOrderDate && 
+      new Date().getTime() - new Date(c.lastOrderDate).getTime() < 30 * 24 * 60 * 60 * 1000
     ).length;
-    const outOfStock = filteredProducts.filter((p) => p.availableStock === 0).length;
-    const inStock = filteredProducts.filter(
-      (p) => p.availableStock > p.lowStockThreshold
+    const premium = filteredCustomers.filter((c) => c.totalValue > 100000).length;
+    const nearCredit = filteredCustomers.filter(
+      (c) => (c.creditUsed / c.creditLimit) > 0.8
     ).length;
 
-    return { lowStock, outOfStock, inStock };
+    return { total, active, premium, nearCredit };
   };
 
-  const stockSummary = getStockSummary();
+  const stats = getCustomerStats();
 
   const getLastUpdateText = () => {
     if (!lastUpdated) return 'Never';
@@ -98,43 +108,40 @@ export default function InventoryPage() {
   return (
     <MobileLayout>
       <div className="flex flex-col h-full">
-        {/* Modern Header with Gradient Background */}
-        <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 text-white">
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-500 text-white">
           <div className="p-6 pb-8">
             {/* Top Bar */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg">
-                  <Sparkles className="h-7 w-7 text-white" />
+                  <Users className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-display font-bold">Products</h1>
+                  <h1 className="text-3xl font-display font-bold">Customers</h1>
                   <p className="text-white/90 text-sm mt-0.5">
-                    {filteredProducts.length} items available
+                    {filteredCustomers.length} customers
                   </p>
                 </div>
               </div>
 
-              {/* Cart Button */}
-              {cartItemsCount > 0 && (
-                <button
-                  onClick={() => router.push('/orders/new')}
-                  className="relative p-4 bg-white/20 backdrop-blur-xl rounded-2xl hover:bg-white/30 transition-all duration-200 active:scale-95 shadow-lg"
-                >
-                  <ShoppingCart className="h-6 w-6 text-white" />
-                  <span className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold shadow-lg">
-                    {cartItemsCount}
-                  </span>
-                </button>
-              )}
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl hover:bg-white/30 transition-all duration-200 active:scale-95 shadow-lg disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-6 w-6 text-white ${refreshing ? 'animate-spin' : ''}`}
+                />
+              </button>
             </div>
 
             {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-rose-300" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-300" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search customers..."
                 value={searchText}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-white/20 backdrop-blur-xl border-2 border-white/30 rounded-2xl text-white placeholder:text-white/60 focus:bg-white/30 focus:border-white/50 transition-all outline-none"
@@ -151,112 +158,102 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* Filters & Controls */}
+        {/* Stats & Filters */}
         <div className="bg-white border-b border-gray-100 p-4 space-y-4 shadow-sm">
-          {/* Stock Summary */}
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200 shrink-0">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-              <span className="text-sm font-semibold text-emerald-700">
-                {stockSummary.inStock} In Stock
-              </span>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-3 text-center border border-gray-200">
+              <Users className="h-4 w-4 text-gray-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xxs text-gray-600 font-medium">Total</p>
             </div>
-            {stockSummary.lowStock > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-xl border border-amber-200 shrink-0">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span className="text-sm font-semibold text-amber-700">
-                  {stockSummary.lowStock} Low
-                </span>
-              </div>
-            )}
-            {stockSummary.outOfStock > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 rounded-xl border border-red-200 shrink-0">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-sm font-semibold text-red-700">
-                  {stockSummary.outOfStock} Out
-                </span>
-              </div>
-            )}
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-3 text-center border border-emerald-200">
+              <TrendingUp className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-emerald-700">{stats.active}</p>
+              <p className="text-xxs text-emerald-600 font-medium">Active</p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-3 text-center border border-amber-200">
+              <Award className="h-4 w-4 text-amber-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-amber-700">{stats.premium}</p>
+              <p className="text-xxs text-amber-600 font-medium">Premium</p>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-3 text-center border border-red-200">
+              <AlertCircle className="h-4 w-4 text-red-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-red-700">{stats.nearCredit}</p>
+              <p className="text-xxs text-red-600 font-medium">Credit</p>
+            </div>
           </div>
 
-          {/* Category Filter & View Toggle */}
-          <div className="flex items-center gap-3">
-            {/* Category Dropdown */}
+          {/* Filters and Sort */}
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+            {/* Type Filter */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all flex-1 ${
-                showFilters || selectedCategory !== 'all'
-                  ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-500/25'
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                showFilters || selectedType !== 'all'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Filter className="h-4 w-4" />
               <span className="text-sm">
-                {selectedCategory === 'all' ? 'All Categories' : selectedCategory}
+                {selectedType === 'all' ? 'All Types' : CUSTOMER_TYPES.find(t => t.value === selectedType)?.label}
               </span>
-              <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* View Toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2.5 rounded-lg transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-white shadow-sm text-rose-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Grid3x3 className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2.5 rounded-lg transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-white shadow-sm text-rose-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <List className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Refresh Button */}
+            {/* Sort Buttons */}
             <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+              onClick={() => handleSortChange('distance')}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                sortMode === 'distance'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              <RefreshCw
-                className={`h-5 w-5 text-gray-700 ${refreshing ? 'animate-spin' : ''}`}
-              />
+              <MapPin className="h-4 w-4" />
+              <span className="text-sm">Nearest</span>
+            </button>
+
+            <button
+              onClick={() => handleSortChange('lastOrder')}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                sortMode === 'lastOrder'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm">Recent</span>
             </button>
           </div>
 
-          {/* Category Filter Dropdown */}
+          {/* Type Filter Dropdown */}
           {showFilters && (
             <div className="bg-gray-50 rounded-2xl p-3 space-y-2 animate-slide-up border border-gray-200">
               <button
-                onClick={() => handleCategoryChange('all')}
-                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all ${
-                  selectedCategory === 'all'
-                    ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg'
+                onClick={() => handleTypeChange('all')}
+                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${
+                  selectedType === 'all'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
                     : 'text-gray-700 hover:bg-white'
                 }`}
               >
-                All Categories
+                <span className="text-2xl">📦</span>
+                <span>All Types</span>
               </button>
-              {PRODUCT_CATEGORIES.map((category) => (
+              {CUSTOMER_TYPES.map((type) => (
                 <button
-                  key={category}
-                  onClick={() => handleCategoryChange(category)}
-                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all ${
-                    selectedCategory === category
-                      ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg'
+                  key={type.value}
+                  onClick={() => handleTypeChange(type.value)}
+                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${
+                    selectedType === type.value
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-white'
                   }`}
                 >
-                  {category}
+                  <span className="text-2xl">{type.icon}</span>
+                  <span>{type.label}</span>
                 </button>
               ))}
             </div>
@@ -270,6 +267,11 @@ export default function InventoryPage() {
                 <span className="ml-1 text-amber-600 font-medium">(cached)</span>
               )}
             </span>
+            {sortMode !== 'name' && (
+              <span className="text-blue-600 font-medium">
+                Sorted by {sortMode === 'distance' ? 'distance' : 'last order'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -279,8 +281,8 @@ export default function InventoryPage() {
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
-                <div className="spinner-lg mb-4 text-rose-600"></div>
-                <p className="text-gray-600 font-medium">Loading products...</p>
+                <div className="spinner-lg mb-4 text-blue-600"></div>
+                <p className="text-gray-600 font-medium">Loading customers...</p>
               </div>
             </div>
           )}
@@ -292,7 +294,7 @@ export default function InventoryPage() {
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-semibold text-red-900 mb-1">
-                    Failed to load products
+                    Failed to load customers
                   </h3>
                   <p className="text-sm text-red-700">{error}</p>
                   <button
@@ -306,30 +308,30 @@ export default function InventoryPage() {
             </div>
           )}
 
-          {/* Products Grid/List */}
+          {/* Customers List */}
           {!loading && !error && (
             <>
-              {filteredProducts.length === 0 ? (
+              {filteredCustomers.length === 0 ? (
                 // Empty State
                 <div className="empty-state">
                   <div className="empty-state-icon">
-                    <Package className="w-full h-full" />
+                    <Users className="w-full h-full" />
                   </div>
-                  <h3 className="empty-state-title">No Products Found</h3>
+                  <h3 className="empty-state-title">No Customers Found</h3>
                   <p className="empty-state-description">
                     {searchText
-                      ? `No products match "${searchText}"`
-                      : selectedCategory !== 'all'
-                      ? `No products in ${selectedCategory} category`
-                      : 'No products available'}
+                      ? `No customers match "${searchText}"`
+                      : selectedType !== 'all'
+                      ? `No customers of type ${CUSTOMER_TYPES.find(t => t.value === selectedType)?.label}`
+                      : 'No customers assigned to you yet'}
                   </p>
-                  {(searchText || selectedCategory !== 'all') && (
+                  {(searchText || selectedType !== 'all') && (
                     <button
                       onClick={() => {
                         setSearchText('');
                         setSearchQuery('');
-                        setSelectedCategory('all');
-                        setCategory('all');
+                        setSelectedType('all');
+                        setType('all');
                       }}
                       className="btn-primary"
                     >
@@ -337,28 +339,15 @@ export default function InventoryPage() {
                     </button>
                   )}
                 </div>
-              ) : viewMode === 'grid' ? (
-                // Grid View
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      showStock={true}
-                      compact={false}
-                    />
-                  ))}
-                </div>
               ) : (
-                // List View
+                // Customer Cards
                 <div className="space-y-3">
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      showStock={true}
+                  {filteredCustomers.map((customer) => (
+                    <CustomerCard
+                      key={customer.id}
+                      customer={customer}
+                      onClick={handleCustomerClick}
+                      showDistance={sortMode === 'distance'}
                       compact={true}
                     />
                   ))}
