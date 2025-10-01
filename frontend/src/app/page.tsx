@@ -20,7 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { analyticsService, ordersService, customersService } from '@/lib/api';
+import { analyticsService, orderService, customerService } from '@/lib/api';
 
 // Types from your backend
 interface DashboardData {
@@ -87,7 +87,7 @@ export default function Dashboard() {
       setDashboardData(analytics as any);
       
       // Fetch recent orders
-      const ordersResponse = await ordersService.getAll();
+      const ordersResponse = await orderService.getAll();
       const sortedOrders = ordersResponse.orders
         .sort((a: any, b: any) => new Date(b.orderInfo.orderDate).getTime() - new Date(a.orderInfo.orderDate).getTime())
         .slice(0, 4);
